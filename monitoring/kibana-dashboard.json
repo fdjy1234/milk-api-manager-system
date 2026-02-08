@@ -1,0 +1,14 @@
+{
+  "version": "7.17.0",
+  "objects": [
+    {
+      "id": "apisix-overview",
+      "type": "dashboard",
+      "attributes": {
+        "title": "APISIX Traffic & Security Overview",
+        "description": "Compliance monitoring for API gateway",
+        "panelsJSON": "[{\"type\":\"visualization\",\"id\":\"requests-per-minute\"},{\"type\":\"visualization\",\"id\":\"error-rate-by-service\"}]"
+      }
+    }
+  ]
+}
