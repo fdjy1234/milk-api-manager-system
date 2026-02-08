@@ -18,10 +18,17 @@ plugins:
   - prometheus
   - limit-count
   - key-auth
+  - opentelemetry
 
 plugin_attr:
   prometheus:
     export_addr:
       ip: "0.0.0.0"
       port: 9091
+  opentelemetry:
+    resource:
+      service.name: "apisix"
+    collector:
+      address: "jaeger:4317" # gRPC endpoint
+      request_timeout: 3
 
