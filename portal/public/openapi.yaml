@@ -1,0 +1,11 @@
+openapi: 3.0.0
+info:
+  title: Milk InsureTech API
+  version: 1.0.0
+paths:
+  /api/process:
+    post:
+      summary: PII 脫敏處理
+      responses:
+        '200':
+          description: OK
