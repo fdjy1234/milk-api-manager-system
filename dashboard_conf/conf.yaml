@@ -1,0 +1,9 @@
+conf:
+  listen:
+    port: 9000
+  etcd:
+    endpoints:
+      - http://etcd:2379
+    prefix: "/apisix"
+  authentication:
+    secret: root  # 預設密碼
