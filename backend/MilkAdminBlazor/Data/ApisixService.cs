@@ -65,6 +65,14 @@ namespace MilkAdminBlazor.Data
         public DateTime? LastSyncTime { get; set; }
     }
 
+    public class ConsumerStats
+    {
+        public string Username { get; set; }
+        public long RequestCount { get; set; }
+        public double ErrorRate { get; set; } // Percentage
+        public DateTime Timestamp { get; set; }
+    }
+
     public class ApisixService
     {
         private readonly HttpClient _httpClient;
@@ -144,6 +152,30 @@ namespace MilkAdminBlazor.Data
         public async Task DeleteConsumerAsync(string username)
         {
             await _httpClient.DeleteAsync($"api/Consumer/{username}");
+        }
+
+        public async Task<List<ConsumerStats>> GetConsumerStatsAsync(string username = null)
+        {
+            // In a real scenario, this would call Prometheus API or a backend proxy.
+            // For now, returning mock data as per typical Prometheus metrics.
+            
+            var stats = new List<ConsumerStats>();
+            var consumers = username == null ? (await GetConsumersAsync()).Select(c => c.Username).ToList() : new List<string> { username };
+            
+            if (!consumers.Any()) consumers = new List<string> { "global_user", "mobile_app", "partner_a" };
+
+            var rng = new Random();
+            foreach (var user in consumers)
+            {
+                stats.Add(new ConsumerStats
+                {
+                    Username = user,
+                    RequestCount = rng.Next(1000, 50000),
+                    ErrorRate = rng.NextDouble() * 5, // 0-5%
+                    Timestamp = DateTime.Now
+                });
+            }
+            return stats;
         }
     }
 }

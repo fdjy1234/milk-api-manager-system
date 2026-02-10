@@ -1,0 +1,81 @@
+@page "/reports"
+@using MilkAdminBlazor.Data
+@using System.Text
+@inject ApisixService ApisixService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" GutterBottom="true">📊 API 統計報表 (Consumer Stats)</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">顯示特定消費者的 Request Count 與 Error Rate (資料源: Prometheus/Grafana 介接)。</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="4">
+            <MudSelect T="string" Label="選擇消費者" @bind-Value="_selectedConsumer" Clearable="true">
+                <MudSelectItem Value="@((string)null)">[全部消費者]</MudSelectItem>
+                @foreach (var consumer in _consumers)
+                {
+                    <MudSelectItem Value="@consumer.Username">@consumer.Username</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" Class="d-flex align-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadStats" StartIcon="@Icons.Material.Filled.Refresh">更新數據</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ExportToCsv" StartIcon="@Icons.Material.Filled.Download" Class="ml-2">匯出 CSV</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@_stats" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+    <HeaderContent>
+        <MudTh>消費者名稱</MudTh>
+        <MudTh>Request Count (24h)</MudTh>
+        <MudTh>Error Rate (%)</MudTh>
+        <MudTh>最後更新時間</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Username">@context.Username</MudTd>
+        <MudTd DataLabel="Request Count">@context.RequestCount.ToString("N0")</MudTd>
+        <MudTd DataLabel="Error Rate">
+            <MudText Color="@(context.ErrorRate > 2 ? Color.Error : Color.Success)">
+                @context.ErrorRate.ToString("F2")%
+            </MudText>
+        </MudTd>
+        <MudTd DataLabel="Timestamp">@context.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private List<ApiConsumer> _consumers = new();
+    private List<ConsumerStats> _stats = new();
+    private bool _loading = true;
+    private string _selectedConsumer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _consumers = await ApisixService.GetConsumersAsync();
+        await LoadStats();
+    }
+
+    private async Task LoadStats()
+    {
+        _loading = true;
+        _stats = await ApisixService.GetConsumerStatsAsync(_selectedConsumer);
+        _loading = false;
+    }
+
+    private async Task ExportToCsv()
+    {
+        var csv = new StringBuilder();
+        csv.AppendLine("Username,RequestCount,ErrorRate,Timestamp");
+        foreach (var stat in _stats)
+        {
+            csv.AppendLine($"{stat.Username},{stat.RequestCount},{stat.ErrorRate:F2},{stat.Timestamp:yyyy-MM-dd HH:mm:ss}");
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(csv.ToString());
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", "consumer_stats.csv", "text/csv", base64);
+        Snackbar.Add("CSV 已匯出", Severity.Success);
+    }
+}
