@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using MilkApiManager.Models.Apisix;
 
 namespace MilkApiManager.Services
@@ -8,25 +9,49 @@ namespace MilkApiManager.Services
     {
         private readonly ILogger<AdGroupSyncService> _logger;
         private readonly ApisixClient _apisixClient;
+        private readonly IServiceProvider _serviceProvider;
         private Timer? _timer;
         private string _syncStatus = "Idle";
         private DateTime? _lastSyncTime;
 
-        public AdGroupSyncService(ILogger<AdGroupSyncService> logger, ApisixClient apisixClient)
+        public AdGroupSyncService(ILogger<AdGroupSyncService> logger, ApisixClient apisixClient, IServiceProvider serviceProvider)
         {
             _logger = logger;
             _apisixClient = apisixClient;
+            _serviceProvider = serviceProvider;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("AD Group Sync Service is starting.");
-            // Sync every 30 minutes
-            _timer = new Timer(DoSync, null, TimeSpan.Zero, TimeSpan.FromMinutes(30));
+            _logger.LogInformation("AD Group Sync and Security Automation Service is starting.");
+            // Sync and check security every 30 minutes
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMinutes(30));
             return Task.CompletedTask;
         }
 
-        private async void DoSync(object? state)
+        private async void DoWork(object? state)
+        {
+            await DoSync();
+            await DoSecurityCheck();
+        }
+
+        private async Task DoSecurityCheck()
+        {
+            try
+            {
+                using (var scope = _serviceProvider.CreateScope())
+                {
+                    var securityService = scope.ServiceProvider.GetRequiredService<SecurityAutomationService>();
+                    await securityService.CheckAndRotateKeys();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Security Lifecycle check.");
+            }
+        }
+
+        private async Task DoSync()
         {
             _syncStatus = "Syncing";
             try

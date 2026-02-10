@@ -9,8 +9,10 @@ namespace MilkApiManager.Models
         public string Owner { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime ExpiresAt { get; set; }
+        public DateTime? LastRotatedAt { get; set; } // 新增：上次輪轉時間
         public bool IsActive { get; set; }
         public string Scopes { get; set; } // JSON: ["read", "write"]
+        public string ContactEmail { get; set; } // 新增：通知聯絡人
     }
 
     public class CreateKeyRequest
