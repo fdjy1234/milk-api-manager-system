@@ -64,5 +64,76 @@ def update_blacklist():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/Consumer', methods=['GET'])
+def get_consumers():
+    try:
+        resp = requests.get(f"{APISIX_ADMIN_URL}/consumers", headers={"X-API-KEY": APISIX_ADMIN_KEY})
+        raw_data = resp.json()
+        
+        # Transform APISIX consumer structure to our model
+        consumers = []
+        # APISIX returns a list of items inside 'list' or similar depending on version/format
+        # Assuming typical APISIX response format
+        for item in raw_data.get('list', []):
+            value = item.get('value', {})
+            plugins = value.get('plugins', {})
+            limit_count = plugins.get('limit-count', {})
+            
+            consumers.append({
+                "username": value.get('username'),
+                "desc": value.get('desc', ""),
+                "labels": value.get('labels', []),
+                "quota": {
+                    "count": limit_count.get('count', 1000),
+                    "time_window": limit_count.get('time_window', 3600),
+                    "rejected_code": limit_count.get('rejected_code', 429),
+                    "rejected_msg": limit_count.get('rejected_msg', "API quota exceeded.")
+                }
+            })
+        return jsonify(consumers), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/Consumer', methods=['POST'])
+def update_consumer():
+    data = request.json
+    username = data.get('username')
+    if not username:
+        return jsonify({"error": "Username is required"}), 400
+    
+    quota = data.get('quota', {})
+    
+    consumer_config = {
+        "username": username,
+        "desc": data.get('desc', ""),
+        "labels": data.get('labels', []),
+        "plugins": {
+            "limit-count": {
+                "count": quota.get('count', 1000),
+                "time_window": quota.get('time_window', 3600),
+                "rejected_code": quota.get('rejected_code', 429),
+                "rejected_msg": quota.get('rejected_msg', "API quota exceeded.")
+            }
+        }
+    }
+
+    try:
+        resp = requests.put(
+            f"{APISIX_ADMIN_URL}/consumers/{username}",
+            headers={"X-API-KEY": APISIX_ADMIN_KEY},
+            json=consumer_config
+        )
+        return jsonify({"message": "Consumer updated successfully"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/Consumer/<username>', methods=['DELETE'])
+def delete_consumer(username):
+    try:
+        resp = requests.delete(f"{APISIX_ADMIN_URL}/consumers/{username}", headers={"X-API-KEY": APISIX_ADMIN_KEY})
+        return jsonify({"message": "Consumer deleted successfully"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
