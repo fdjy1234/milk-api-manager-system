@@ -1,0 +1,125 @@
+@page "/consumers"
+@using MilkAdminBlazor.Data
+@inject ApisixService ApisixService
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" GutterBottom="true">👥 API 消費者權限管理 (Consumers)</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">在此管理 API 使用者及其角色 (Roles) 與權限範圍 (Scopes)。</MudText>
+
+<MudTable Items="@_consumers" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+    <HeaderContent>
+        <MudTh>使用者名稱</MudTh>
+        <MudTh>描述</MudTh>
+        <MudTh>角色與權限 (Labels)</MudTh>
+        <MudTh>操作</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Username">@context.Username</MudTd>
+        <MudTd DataLabel="Desc">@context.Desc</MudTd>
+        <MudTd DataLabel="Labels">
+            @foreach (var label in context.Labels)
+            {
+                <MudChip Color="@(label.StartsWith("role:") ? Color.Primary : Color.Secondary)" Size="Size.Small">@label</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Actions">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => EditConsumer(context))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteConsumer(context.Username))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddConsumer" Class="mt-4">新增消費者</MudButton>
+
+<MudDialog @bind-IsVisible="_editDialogOpen" Options="_dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(_isEditing ? "編輯消費者" : "新增消費者")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_currentConsumer.Username" Label="使用者名稱" Variant="Variant.Outlined" ReadOnly="@_isEditing" />
+        <MudTextField @bind-Value="_currentConsumer.Desc" Label="描述" Variant="Variant.Outlined" Class="mt-4" />
+        
+        <MudText Typo="Typo.subtitle2" Class="mt-4">角色與權限 (以逗號分隔, 例如 role:admin, scope:all)</MudText>
+        <MudTextField @bind-Value="_labelsText" Label="Labels" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="CloseDialog">取消</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveConsumer">儲存</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<ApiConsumer> _consumers = new();
+    private bool _loading = true;
+    private bool _editDialogOpen;
+    private bool _isEditing;
+    private ApiConsumer _currentConsumer = new();
+    private string _labelsText = "";
+    private DialogOptions _dialogOptions = new() { FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConsumers();
+    }
+
+    private async Task LoadConsumers()
+    {
+        _loading = true;
+        _consumers = await ApisixService.GetConsumersAsync();
+        _loading = false;
+    }
+
+    private void AddConsumer()
+    {
+        _isEditing = false;
+        _currentConsumer = new ApiConsumer();
+        _labelsText = "";
+        _editDialogOpen = true;
+    }
+
+    private void EditConsumer(ApiConsumer consumer)
+    {
+        _isEditing = true;
+        _currentConsumer = new ApiConsumer
+        {
+            Username = consumer.Username,
+            Desc = consumer.Desc,
+            Labels = new List<string>(consumer.Labels)
+        };
+        _labelsText = string.Join(", ", _currentConsumer.Labels);
+        _editDialogOpen = true;
+    }
+
+    private async Task SaveConsumer()
+    {
+        if (string.IsNullOrWhiteSpace(_currentConsumer.Username))
+        {
+            Snackbar.Add("使用者名稱不能為空", Severity.Error);
+            return;
+        }
+
+        _currentConsumer.Labels = _labelsText.Split(',')
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToList();
+
+        await ApisixService.UpdateConsumerAsync(_currentConsumer);
+        _editDialogOpen = false;
+        await LoadConsumers();
+        Snackbar.Add("儲存成功", Severity.Success);
+    }
+
+    private async Task DeleteConsumer(string username)
+    {
+        await ApisixService.DeleteConsumerAsync(username);
+        await LoadConsumers();
+        Snackbar.Add("刪除成功", Severity.Success);
+    }
+
+    private void CloseDialog()
+    {
+        _editDialogOpen = false;
+    }
+}
