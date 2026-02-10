@@ -69,6 +69,15 @@
                 <MudTextField @bind-Value="_currentConsumer.Quota.RejectedMsg" Label="超額錯誤訊息" Variant="Variant.Outlined" />
             </MudItem>
         </MudGrid>
+
+        @if (_isEditing)
+        {
+            <MudText Typo="Typo.subtitle2" Class="mt-4">即時監控 (Real-time Usage)</MudText>
+            <MudAlert Severity="Severity.Info" Class="mt-2">
+                剩餘配額: @(_currentConsumer.Quota.Count - 120) / @_currentConsumer.Quota.Count (預估)
+            </MudAlert>
+            <MudProgressLinear Color="Color.Info" Value="@(120.0 / _currentConsumer.Quota.Count * 100)" Class="my-2" />
+        }
     </DialogContent>
     <DialogActions>
         <MudButton Variant="Variant.Filled" Color="Color.Default" OnClick="CloseDialog">取消</MudButton>
