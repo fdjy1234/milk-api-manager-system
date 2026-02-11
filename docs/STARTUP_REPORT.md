@@ -25,3 +25,25 @@
 - 若需自動化啟動，可在 `docker-compose.yml` 優化啟動順序或加入 healthcheck 與 restart policy。
 
 備註: 日誌顯示的 `connection refused` 多為 `etcd` 尚未完全就緒時產生，已透過逐步啟動降低該情況。
+
+---
+
+日期: 2026-02-11
+
+今日工作摘要:
+- 修正並測試 `docker-compose` 與 APISIX 配置（包含更換可用的 `etcd` 映像、移除不存在的自訂插件，並改為 traditional 模式以啟用 Admin API）。
+- 啟動並驗證所有容器（APISIX、etcd、apisix-dashboard、prometheus、grafana、jaeger、elasticsearch、logstash、kibana）。
+- 啟動並除錯後端服務：
+	- 啟動 `MilkApiManager`（ASP.NET Core）於 `http://localhost:5001`（Development 模式以啟用 Swagger）。
+	- 修正 `MilkAdminBlazor` 問題：`Pages/_Host.cshtml` 新增 `@page "/"`，並以 `http://localhost:5002` 啟動 Blazor UI。
+- 啟動 Flask wrapper（`backend/app.py`）於 `http://localhost:5000`；執行測試發現 GET 端點正常，POST 寫入端點回傳 500，需要進一步 debug（已保留錯誤日誌與測試結果）。
+- 進行 Git 清理與提交：新增 `.gitignore`（排除 `bin/`、`obj/`、IDE 產物等），從索引移除已追蹤的 build 檔並提交 `chore: add .gitignore and remove build artifacts from index`，再推送至 `origin/main`。
+
+測試重點與待辦:
+- Flask POST 500 錯誤：Enable Flask debug 或檢視應用日誌以定位例外堆疊並修復（下一步）。
+- 建議把 `BACKEND_TEST_RESULTS.md`、`TEST_REPORT.md` 視為臨時輸出，若要保留於 repo 請告知；目前 `.gitignore` 已列入相關規則。
+
+短期建議:
+- 在 CI 或本機開發流程中避免將 build 產物加入版本控制；將 `.gitignore` 規則提供給團隊並在 repo policy 中強調。
+- 建立針對寫入（POST/PUT/DELETE）端點的單元/整合測試，避免線上手動測試遺漏錯誤。
+
