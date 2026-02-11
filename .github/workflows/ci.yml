@@ -15,8 +15,6 @@ jobs:
         run: ls -R
 
       - name: Start containers
-        env:
-          PROMETHEUS_CONFIG: ${{ github.workspace }}/monitoring/prometheus.yml
         run: docker compose up -d
 
       - name: Wait for APISIX to be ready

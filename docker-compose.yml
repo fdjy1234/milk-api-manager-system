@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   apisix:
@@ -57,7 +56,7 @@ services:
     image: prom/prometheus:latest
     restart: always
     volumes:
-      - /workspaces/milk-api-manager-syste/home/runner/work/milk-api-manager-system/milk-api-manager-syste${PROMETHEUS_CONFIG}:/etc/prometheus/prometheus.yml:ro
+      - /workspaces/milk-api-manager-syste/home/runner/work/milk-api-manager-system/milk-api-manager-systemonitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
     networks:
