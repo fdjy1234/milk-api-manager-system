@@ -1,0 +1,45 @@
+# Ignore Visual Studio / IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+*.dll
+*.exe
+*.pdb
+*.runtimeconfig.json
+*.deps.json
+*.runtimeconfig.dev.json
+
+# Rider
+.idea/
+
+# Logs
+logs/
+*.log
+
+# npm
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Local test artifacts
+TEST_REPORT.md
+BACKEND_TEST_RESULTS.md
+
+# Docker
+docker-compose.override.yml
+
+# Secrets
+.env
+

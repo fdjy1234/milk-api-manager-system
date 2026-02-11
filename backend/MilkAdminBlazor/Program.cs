@@ -13,7 +13,7 @@ builder.Services.AddMudServices(); // UI Component Library
 // Register HttpClient for ApisixService to talk to MilkApiManager
 builder.Services.AddHttpClient<ApisixService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5000/"); // Assuming MilkApiManager runs on 5000
+    client.BaseAddress = new Uri("http://localhost:5001/"); // MilkApiManager runs on 5001
 });
 
 var app = builder.Build();
