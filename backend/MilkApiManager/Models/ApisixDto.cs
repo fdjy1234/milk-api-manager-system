@@ -54,6 +54,18 @@ namespace MilkApiManager.Models.Apisix
         public string Username { get; set; }
 
         [JsonPropertyName("plugins")]
-        public Dictionary<string, object> Plugins { get; set; }
+        public Dictionary<string, object>? Plugins { get; set; }
+
+        [JsonPropertyName("group_id")]
+        public string? GroupId { get; set; }
+    }
+
+    public class ConsumerGroup
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("plugins")]
+        public Dictionary<string, object>? Plugins { get; set; }
     }
 }

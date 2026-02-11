@@ -64,6 +64,11 @@ namespace MilkApiManager.Services
                 foreach (var group in adGroups)
                 {
                     await SyncGroupToApisix(group);
+                    
+                    foreach (var member in group.Members)
+                    {
+                        await SyncUserToApisix(member, group.Name.ToLower());
+                    }
                 }
 
                 _lastSyncTime = DateTime.UtcNow;
@@ -84,27 +89,37 @@ namespace MilkApiManager.Services
             return new List<AdGroup>
             {
                 new AdGroup { Name = "Developers", Members = new List<string> { "alice", "bob" } },
-                new AdGroup { Name = "Managers", Members = new List<string> { "charlie" } }
+                new AdGroup { Name = "Managers", Members = new List<string> { "charlie" } },
+                new AdGroup { Name = "Testers", Members = new List<string> { "david", "eve" } }
             };
         }
 
         private async Task SyncGroupToApisix(AdGroup group)
         {
             var groupId = group.Name.ToLower();
-            // In APISIX, Consumer Groups are handled via the 'consumer-group' resource
-            // Note: ApisixClient needs to be extended to support consumer groups explicitly if needed, 
-            // but for now we can use the generic method or add it.
-            
             _logger.LogInformation($"Syncing group {group.Name} to APISIX...");
             
-            // Example body for APISIX Consumer Group
-            var groupConfig = new
+            var groupConfig = new ConsumerGroup
             {
-                id = groupId,
-                plugins = new { } 
+                Id = groupId,
+                Plugins = new Dictionary<string, object>()
             };
 
             await _apisixClient.CreateConsumerGroupAsync(groupId, groupConfig);
+        }
+
+        private async Task SyncUserToApisix(string username, string groupId)
+        {
+            _logger.LogInformation($"Syncing user {username} to group {groupId} in APISIX...");
+            
+            var consumer = new Consumer
+            {
+                Username = username,
+                GroupId = groupId,
+                Plugins = new Dictionary<string, object>()
+            };
+
+            await _apisixClient.UpdateConsumerAsync(username, consumer);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

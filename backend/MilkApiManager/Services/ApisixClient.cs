@@ -210,12 +210,22 @@ namespace MilkApiManager.Services
             _logger.LogInformation($"Successfully updated plugin metadata: {pluginName}");
         }
 
-        public async Task CreateConsumerGroupAsync(string id, object groupConfig)
+        public async Task CreateConsumerGroupAsync(string id, ConsumerGroup groupConfig)
         {
             var request = CreateRequest(HttpMethod.Put, $"consumer_groups/{id}", groupConfig);
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
             _logger.LogInformation($"Successfully created consumer group {id}");
+        }
+
+        public async Task DeleteConsumerGroupAsync(string id)
+        {
+            var request = CreateRequest(HttpMethod.Delete, $"consumer_groups/{id}");
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning($"Failed to delete consumer group {id}: {response.StatusCode}");
+            }
         }
     }
 }
