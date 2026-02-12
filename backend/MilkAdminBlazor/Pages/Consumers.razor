@@ -19,7 +19,7 @@
         <MudTd DataLabel="Labels">
             @foreach (var label in context.Labels)
             {
-                <MudChip Color="@(label.StartsWith("role:") ? Color.Primary : Color.Secondary)" Size="Size.Small">@label</MudChip>
+                <MudChip T="string" Color="@(label.StartsWith("role:") ? Color.Primary : Color.Secondary)" Size="Size.Small">@label</MudChip>
             }
         </MudTd>
         <MudTd DataLabel="Actions">
@@ -45,13 +45,13 @@
         <div class="d-flex flex-wrap gap-2 mt-2">
             @foreach (var role in _availableRoles)
             {
-                <MudChip Color="Color.Primary" Variant="@(_selectedRoles.Contains(role) ? Variant.Filled : Variant.Outlined)" OnClick="@(() => ToggleRole(role))">@role</MudChip>
+                <MudChip T="string" Color="Color.Primary" Variant="@(_selectedRoles.Contains(role) ? Variant.Filled : Variant.Outlined)" OnClick="@(() => ToggleRole(role))">@role</MudChip>
             }
         </div>
         <div class="d-flex flex-wrap gap-2 mt-2">
             @foreach (var scope in _availableScopes)
             {
-                <MudChip Color="Color.Secondary" Variant="@(_selectedScopes.Contains(scope) ? Variant.Filled : Variant.Outlined)" OnClick="@(() => ToggleScope(scope))">@scope</MudChip>
+                <MudChip T="string" Color="Color.Secondary" Variant="@(_selectedScopes.Contains(scope) ? Variant.Filled : Variant.Outlined)" OnClick="@(() => ToggleScope(scope))">@scope</MudChip>
             }
         </div>
         

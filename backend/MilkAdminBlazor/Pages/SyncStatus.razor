@@ -10,7 +10,7 @@
     <MudGrid>
         <MudItem xs="12" sm="6">
             <MudText Typo="Typo.h6">當前狀態</MudText>
-            <MudChip Color="@GetStatusColor(_status)" Variant="Variant.Filled" Size="Size.Large">@_status</MudChip>
+            <MudChip T="string" Color="@GetStatusColor(_status)" Variant="Variant.Filled" Size="Size.Large">@_status</MudChip>
         </MudItem>
         <MudItem xs="12" sm="6">
             <MudText Typo="Typo.h6">最後同步時間</MudText>

@@ -15,7 +15,7 @@ services:
       - apisix
 
   apisix:
-    image: apache/apisix:3.8.0-debian
+    image: apache/apisix:${APISIX_IMAGE_TAG:-3.14.1-debian}
     restart: always
     volumes:
       - ./apisix_conf/config.yaml:/usr/local/apisix/conf/config.yaml:ro
@@ -39,7 +39,7 @@ services:
       - apisix
 
   prometheus:
-    image: prom/prometheus:v2.45.0
+    image: prom/prometheus:v2.25.0
     restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -66,40 +66,63 @@ services:
       - apisix
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.1
-    restart: always
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION:-9.2.3}
     environment:
+      - node.name=es01
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - cluster.name=docker-cluster
+      - ELASTIC_PASSWORD=changeme
+      - xpack.security.enabled=true
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
     ports:
       - "9200:9200"
-    networks:
-      - apisix
-
-  logstash:
-    image: docker.elastic.co/logstash/logstash:8.8.1
-    restart: always
+      - "9300:9300"
     volumes:
-      - ./monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
-    depends_on:
-      - elasticsearch
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -u elastic:changeme -fsSL http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
     networks:
       - apisix
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.8.1
-    restart: always
+    image: docker.elastic.co/kibana/kibana:${ELASTIC_VERSION:-9.2.3}
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=changeme
+      - KIBANA_SYSTEM_PASSWORD=changeme
     ports:
       - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - apisix
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${ELASTIC_VERSION:-9.2.3}
+    ports:
+      - "5044:5044"
+      - "8080:8080"
+    environment:
+      - ELASTIC_USERNAME=elastic
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-changeme}
+    volumes:
+      - ./logstash/pipelines:/usr/share/logstash/pipeline:ro
     depends_on:
       - elasticsearch
     networks:
       - apisix
-
+      
 networks:
   apisix:
     driver: bridge
 
 volumes:
   etcd_data:
+    driver: local
+  esdata:
     driver: local
