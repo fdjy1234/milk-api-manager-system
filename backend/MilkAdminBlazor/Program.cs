@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using MudBlazor.Services;
 using MilkAdminBlazor.Data;
+using Microsoft.EntityFrameworkCore;
+using MilkApiManager.Data;
+using MilkApiManager.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +12,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddMudServices(); // UI Component Library
+
+// Register DbContext (shared with MilkApiManager)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=../MilkApiManager/audit.db"));
+
+// Register AuditLogService (needs HttpClient and ScopeFactory)
+builder.Services.AddHttpClient<AuditLogService>();
 
 // Register HttpClient for ApisixService to talk to MilkApiManager
 builder.Services.AddHttpClient<ApisixService>(client =>
