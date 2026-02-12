@@ -1,0 +1,116 @@
+@page "/alert-rules"
+@using MilkApiManager.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h4" Class="mb-4">Alert Rules Configuration</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6">Add New Rule</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="4">
+            <MudTextField @bind-Value="newRule.Name" Label="Rule Name" Required="true" />
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudSelect @bind-Value="newRule.MetricName" Label="Metric">
+                <MudSelectItem Value="@("apisix_http_status")">5xx Error Spike</MudSelectItem>
+                <MudSelectItem Value="@("apisix_http_requests_total")">High Frequency IP</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudNumericField @bind-Value="newRule.Threshold" Label="Threshold" />
+        </MudItem>
+        <MudItem xs="12" sm="2">
+            <MudTextField @bind-Value="newRule.Duration" Label="Duration (e.g. 1m)" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudCheckBox @bind-Value="useMattermost" Label="Mattermost" Color="Color.Primary" />
+            <MudCheckBox @bind-Value="useEmail" Label="Email" Color="Color.Primary" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddRule" Class="ml-4">Add Rule</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@rules" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@loading">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Metric</MudTh>
+        <MudTh>Threshold</MudTh>
+        <MudTh>Duration</MudTh>
+        <MudTh>Channels</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Metric">@context.MetricName</MudTd>
+        <MudTd DataLabel="Threshold">@context.Threshold</MudTd>
+        <MudTd DataLabel="Duration">@context.Duration</MudTd>
+        <MudTd DataLabel="Channels">@string.Join(", ", context.NotificationChannels)</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip Color="@(context.IsEnabled ? Color.Success : Color.Default)">@(context.IsEnabled ? "Enabled" : "Disabled")</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Actions">
+            <MudIconButton Icon="@Icons.Material.Filled.PowerSettingsNew" OnClick="@(() => ToggleRule(context.Id))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteRule(context.Id))" />
+        </RowTemplate>
+</MudTable>
+
+@code {
+    private List<AlertRule> rules = new();
+    private AlertRule newRule = new() { Name = "", MetricName = "apisix_http_status", Threshold = 10, Duration = "1m" };
+    private bool useMattermost = true;
+    private bool useEmail = false;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRules();
+    }
+
+    private async Task LoadRules()
+    {
+        loading = true;
+        try
+        {
+            // In a real environment, this URL should be configured
+            rules = await Http.GetFromJsonAsync<List<AlertRule>>("http://localhost:5000/api/AlertRules") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load rules: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task AddRule()
+    {
+        newRule.NotificationChannels.Clear();
+        if (useMattermost) newRule.NotificationChannels.Add("Mattermost");
+        if (useEmail) newRule.NotificationChannels.Add("Email");
+
+        var response = await Http.PostAsJsonAsync("http://localhost:5000/api/AlertRules", newRule);
+        if (response.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Rule added successfully", Severity.Success);
+            newRule = new AlertRule { Name = "", MetricName = "apisix_http_status", Threshold = 10, Duration = "1m" };
+            await LoadRules();
+        }
+    }
+
+    private async Task ToggleRule(string id)
+    {
+        await Http.PutAsync($"http://localhost:5000/api/AlertRules/{id}/toggle", null);
+        await LoadRules();
+    }
+
+    private async Task DeleteRule(string id)
+    {
+        await Http.DeleteAsync($"http://localhost:5000/api/AlertRules/{id}");
+        await LoadRules();
+    }
+}

@@ -1,0 +1,20 @@
+groups:
+  - name: api_anomaly_alerts
+    rules:
+      - alert: High5xxErrorRate
+        expr: sum(rate(apisix_http_status{code=~"5.."}[1m])) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate detected"
+          description: "API Gateway is returning high rate of 5xx errors (current value: {{ $value }})"
+
+      - alert: HighFrequencyIPAccess
+        expr: max(rate(apisix_http_requests_total[1m])) by (remote_addr) > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High frequency IP access detected"
+          description: "IP {{ $labels.remote_addr }} is making excessive requests (current value: {{ $value }})"

@@ -1,16 +1,22 @@
 using System.Text.Json;
 using MilkApiManager.Models;
+using MilkApiManager.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace MilkApiManager.Services;
 
 public class AuditLogService
 {
     private readonly HttpClient _httpClient;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IConfiguration _config;
     private readonly string _logstashEndpoint = "http://logstash:8080/";
 
-    public AuditLogService(HttpClient httpClient)
+    public AuditLogService(HttpClient httpClient, IServiceProvider serviceProvider, IConfiguration config)
     {
         _httpClient = httpClient;
+        _serviceProvider = serviceProvider;
+        _config = config;
     }
 
     /// <summary>
@@ -37,8 +43,30 @@ public class AuditLogService
         // 輸出到 Standard Output
         Console.WriteLine(json);
 
-        // Optional: 也可以保留原本的 HTTP Shipping 邏輯
-        // await ShipLogsToSIEM(entry);
+        // Database Write Logic
+        var dbEnabled = _config.GetValue<bool>("AuditLog:EnableDatabaseWrite");
+        var includedActions = _config.GetSection("AuditLog:IncludedActions").Get<string[]>() ?? Array.Empty<string>();
+
+        if (dbEnabled && (includedActions.Length == 0 || includedActions.Contains(entry.Action)))
+        {
+            try
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<AuditContext>();
+                
+                if (entry.Details != null)
+                {
+                    entry.DetailsJson = JsonSerializer.Serialize(entry.Details);
+                }
+                
+                dbContext.AuditLogs.Add(entry);
+                await dbContext.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Error] Failed to write audit log to DB: {ex.Message}");
+            }
+        }
         
         await Task.CompletedTask;
     }

@@ -1,0 +1,58 @@
+@page "/audit-logs"
+@using MilkApiManager.Models
+@inject HttpClient Http
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">System Audit Logs</MudText>
+    
+    <MudTable Items="@_logs" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Timestamp (UTC)</MudTh>
+            <MudTh>User</MudTh>
+            <MudTh>Action</MudTh>
+            <MudTh>Resource</MudTh>
+            <MudTh>Details</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Timestamp">@context.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+            <MudTd DataLabel="User">@context.User</MudTd>
+            <MudTd DataLabel="Action">
+                <MudChip Color="@GetActionColor(context.Action)" Size="Size.Small">@context.Action</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Resource">@context.Resource</MudTd>
+            <MudTd DataLabel="Details">@context.DetailsJson</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private IEnumerable<AuditLogEntry> _logs = new List<AuditLogEntry>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _logs = await Http.GetFromJsonAsync<IEnumerable<AuditLogEntry>>("api/AuditLog") ?? new List<AuditLogEntry>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading logs: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetActionColor(string action) => action switch
+    {
+        "Create" => Color.Success,
+        "Update" => Color.Info,
+        "Delete" => Color.Error,
+        _ => Color.Default
+    };
+}
