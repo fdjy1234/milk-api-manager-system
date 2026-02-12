@@ -11,8 +11,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Register DbContext
+// Check both connection string paths just in case
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=audit.db";
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=audit.db"));
+    options.UseSqlite(connectionString));
 
 // Register Services
 builder.Services.AddHttpClient<ApisixClient>();
@@ -25,6 +27,13 @@ builder.Services.AddSingleton<AdGroupSyncService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<AdGroupSyncService>());
 
 var app = builder.Build();
+
+// Auto-migrate/ensure created
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
