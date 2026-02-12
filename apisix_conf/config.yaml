@@ -9,10 +9,11 @@ deployment:
     timeout: 30
   admin:
     allow_admin:
-      - 0.0.0.0/0
+      - 172.0.0.0/8   # Docker internal networks only
+      - 10.0.0.0/8     # Docker overlay networks
     admin_key:
       - name: admin
-        key: edd1c9f034335f136f87ad84b625c88b
+        key: edd1c9f034335f136f87ad84b625c88b  # IMPORTANT: Override via APISIX env var in production!
         role: admin
     admin_listen:
       ip: 0.0.0.0

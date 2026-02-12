@@ -10,7 +10,8 @@ module.exports = defineConfig({
     baseURL,
     headless: true,
     viewport: { width: 1400, height: 900 },
-    screenshot: 'off'
+    screenshot: 'on',
+    ignoreHTTPSErrors: true
   },
   reporter: [
     ['list'],

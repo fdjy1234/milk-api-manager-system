@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MilkApiManager.Services;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MilkApiManager.Controllers
 {
@@ -10,6 +11,7 @@ namespace MilkApiManager.Controllers
     {
         private readonly ApisixClient _apisixClient;
         private readonly ILogger<ConsumerController> _logger;
+        private static readonly Regex UsernameRegex = new(@"^[a-zA-Z0-9_\-]{1,64}$", RegexOptions.Compiled);
 
         public ConsumerController(ApisixClient apisixClient, ILogger<ConsumerController> logger)
         {
@@ -70,8 +72,13 @@ namespace MilkApiManager.Controllers
         {
             try
             {
-                string username = consumerData.GetProperty("username").GetString();
+                string username = consumerData.GetProperty("username").GetString()!;
                 
+                if (!UsernameRegex.IsMatch(username))
+                {
+                    return BadRequest("Username must be 1-64 characters and contain only alphanumeric characters, underscores, or hyphens.");
+                }
+
                 // Transform internal model to APISIX-compatible format
                 var apisixFormat = new Dictionary<string, object>
                 {
@@ -107,6 +114,11 @@ namespace MilkApiManager.Controllers
         [HttpDelete("{username}")]
         public async Task<IActionResult> DeleteConsumer(string username)
         {
+            if (!UsernameRegex.IsMatch(username))
+            {
+                return BadRequest("Invalid username format.");
+            }
+
             try
             {
                 await _apisixClient.DeleteConsumerAsync(username);
@@ -120,3 +132,4 @@ namespace MilkApiManager.Controllers
         }
     }
 }
+

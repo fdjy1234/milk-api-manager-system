@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MilkApiManager.Services;
+using System.Net;
+using System.Text.RegularExpressions;
 
 namespace MilkApiManager.Controllers
 {
@@ -9,11 +11,28 @@ namespace MilkApiManager.Controllers
     {
         private readonly ApisixClient _apisixClient;
         private readonly ILogger<BlacklistController> _logger;
+        private static readonly Regex CidrRegex = new(@"^[\d\.:a-fA-F]+/\d{1,3}$", RegexOptions.Compiled);
 
         public BlacklistController(ApisixClient apisixClient, ILogger<BlacklistController> logger)
         {
             _apisixClient = apisixClient;
             _logger = logger;
+        }
+
+        private static bool IsValidIpOrCidr(string ip)
+        {
+            if (string.IsNullOrWhiteSpace(ip)) return false;
+
+            // Check CIDR notation (e.g., 192.168.1.0/24)
+            if (ip.Contains('/'))
+            {
+                if (!CidrRegex.IsMatch(ip)) return false;
+                var parts = ip.Split('/');
+                return IPAddress.TryParse(parts[0], out _) && int.TryParse(parts[1], out var prefix) && prefix >= 0 && prefix <= 128;
+            }
+
+            // Plain IP address
+            return IPAddress.TryParse(ip, out _);
         }
 
         [HttpGet]
@@ -37,6 +56,11 @@ namespace MilkApiManager.Controllers
             if (request == null || string.IsNullOrEmpty(request.Ip))
             {
                 return BadRequest("IP is required");
+            }
+
+            if (!IsValidIpOrCidr(request.Ip))
+            {
+                return BadRequest("Invalid IP address or CIDR format.");
             }
 
             try

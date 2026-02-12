@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MilkApiManager.Models;
 using MilkApiManager.Services;
+using System.Text.RegularExpressions;
 
 namespace MilkApiManager.Controllers
 {
@@ -9,15 +10,24 @@ namespace MilkApiManager.Controllers
     public class AnalyticsController : ControllerBase
     {
         private readonly PrometheusService _prometheus;
+        private static readonly Regex SafeLabelRegex = new(@"^[a-zA-Z0-9_.\-]+$", RegexOptions.Compiled);
 
         public AnalyticsController(PrometheusService prometheus)
         {
             _prometheus = prometheus;
         }
 
+        private static bool IsValidLabel(string? value)
+        {
+            return string.IsNullOrEmpty(value) || SafeLabelRegex.IsMatch(value);
+        }
+
         [HttpGet("requests")]
         public async Task<IActionResult> GetRequests([FromQuery] AnalyticsQuery query)
         {
+            if (!IsValidLabel(query.Consumer) || !IsValidLabel(query.Route))
+                return BadRequest("Consumer and Route must only contain alphanumeric characters, underscores, hyphens, or dots.");
+
             var start = query.StartTime ?? DateTime.UtcNow.AddHours(-1);
             var end = query.EndTime ?? DateTime.UtcNow;
             
@@ -48,6 +58,9 @@ namespace MilkApiManager.Controllers
         [HttpGet("latency")]
         public async Task<IActionResult> GetLatency([FromQuery] AnalyticsQuery query)
         {
+            if (!IsValidLabel(query.Consumer) || !IsValidLabel(query.Route))
+                return BadRequest("Consumer and Route must only contain alphanumeric characters, underscores, hyphens, or dots.");
+
             var start = query.StartTime ?? DateTime.UtcNow.AddHours(-1);
             var end = query.EndTime ?? DateTime.UtcNow;
 
@@ -66,6 +79,9 @@ namespace MilkApiManager.Controllers
         [HttpGet("errors")]
         public async Task<IActionResult> GetErrors([FromQuery] AnalyticsQuery query)
         {
+            if (!IsValidLabel(query.Consumer) || !IsValidLabel(query.Route))
+                return BadRequest("Consumer and Route must only contain alphanumeric characters, underscores, hyphens, or dots.");
+
             var start = query.StartTime ?? DateTime.UtcNow.AddHours(-1);
             var end = query.EndTime ?? DateTime.UtcNow;
 
@@ -85,3 +101,4 @@ namespace MilkApiManager.Controllers
         }
     }
 }
+

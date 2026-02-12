@@ -26,14 +26,14 @@ namespace MilkApiManager.Services
 
         public async Task<string> StoreSecretAsync(string path, string secret)
         {
-            _logger.LogInformation($"[Vault] Storing secret at {path}...");
+            _logger.LogInformation("[Vault] Storing secret at {Path}...", path);
             // Real implementation would use VaultSharp
             return "vault-version-1";
         }
 
         public async Task<string> GetSecretAsync(string path)
         {
-            _logger.LogInformation($"[Vault] Retrieving secret from {path}...");
+            _logger.LogInformation("[Vault] Retrieving secret from {Path}...", path);
             return "mock-secret-value";
         }
 
@@ -43,7 +43,7 @@ namespace MilkApiManager.Services
         /// </summary>
         public async Task<string> RotateApiKeyAsync(string consumerName)
         {
-            _logger.LogInformation($"[Vault] Starting API key rotation for consumer: {consumerName}");
+            _logger.LogInformation("[Vault] Starting API key rotation for consumer: {ConsumerName}", consumerName);
 
             // 1. 生成新密鑰
             string newApiKey = Guid.NewGuid().ToString("N");
@@ -76,7 +76,7 @@ namespace MilkApiManager.Services
                 Actor = "Milk-Vault-Automation"
             });
 
-            _logger.LogInformation($"[Vault] API key rotated successfully for {consumerName}");
+            _logger.LogInformation("[Vault] API key rotated successfully for {ConsumerName}", consumerName);
             return newApiKey;
         }
     }

@@ -67,7 +67,7 @@ namespace MilkApiManager.Controllers
                 return Ok(new
                 {
                     Consumer = consumerName,
-                    NewKey = newKey,
+                    KeyPrefix = newKey.Length > 8 ? newKey[..8] + "..." : "***",
                     Message = "API Key has been rotated and synced to APISIX."
                 });
             }

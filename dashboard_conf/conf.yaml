@@ -6,4 +6,5 @@ conf:
       - http://etcd:2379
     prefix: "/apisix"
   authentication:
-    secret: root  # 預設密碼
+    secret: milk-dashboard-secret-change-me  # IMPORTANT: Change this in production!
+
