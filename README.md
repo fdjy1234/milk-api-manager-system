@@ -15,6 +15,17 @@
    - WAF (Web Application Firewall) 整合。
 4. **可觀測性**: 整合 Prometheus + Grafana 以及 ELK Stack。
 
+## Flow (Simple)
+```mermaid
+flowchart TD
+   UI["Admin UI - Blazor"] --> API["MilkApiManager API"]
+   API --> APISIX["APISIX Gateway"]
+   APISIX --> Upstream["Upstream APIs"]
+   API --> Obs["Observability - Prometheus/Grafana/ELK"]
+```
+
+詳細版請參考 [docs/architecture_flow.md](docs/architecture_flow.md)。
+
 ## 📅 開發藍圖 (Roadmap)
 - [x] **Phase 1**: 基礎設施搭建 (APISIX + Dashboard 容器化佈署)。
 - [x] **Phase 2**: API 註冊與自動化路由配置功能。

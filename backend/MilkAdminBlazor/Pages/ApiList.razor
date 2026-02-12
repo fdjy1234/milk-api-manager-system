@@ -24,7 +24,7 @@
                 <code>@context.Uri</code>
             </MudTd>
             <MudTd DataLabel="Risk">
-                <MudChip Color="@GetRiskColor(context.RiskLevel)" Size="Size.Small" Variant="Variant.Filled">@context.RiskLevel</MudChip>
+                <MudChip T="string" Color="@GetRiskColor(context.RiskLevel)" Size="Size.Small" Variant="Variant.Filled">@context.RiskLevel</MudChip>
             </MudTd>
             <MudTd DataLabel="Owner">@context.Owner</MudTd>
             <MudTd DataLabel="Actions" Style="text-align:right">
