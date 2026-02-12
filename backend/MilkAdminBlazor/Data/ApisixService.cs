@@ -15,6 +15,7 @@ namespace MilkAdminBlazor.Data
         public string Uri { get; set; }
         public string RiskLevel { get; set; } // L1, L2, L3
         public string Owner { get; set; }
+        public List<string> WhitelistIps { get; set; } = new();
     }
 
     public class BlacklistRequest

@@ -27,22 +27,67 @@
                 <MudChip T="string" Color="@GetRiskColor(context.RiskLevel)" Size="Size.Small" Variant="Variant.Filled">@context.RiskLevel</MudChip>
             </MudTd>
             <MudTd DataLabel="Owner">@context.Owner</MudTd>
+            <MudTd DataLabel="Whitelist">
+                @if (context.WhitelistIps.Any())
+                {
+                    <MudText Typo="Typo.caption">@string.Join(", ", context.WhitelistIps)</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Default">None</MudText>
+                }
+            </MudTd>
             <MudTd DataLabel="Actions" Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
                 <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">Details</MudButton>
             </MudTd>
         </RowTemplate>
     </MudTable>
+
+    <MudDialog @bind-IsVisible="isDialogOpen" Options="dialogOptions">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Edit Route: @editingApi?.Name</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudTextField @bind-Value="whitelistInput" Label="IP Whitelist (CIDR, comma separated)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveWhitelist">Save</MudButton>
+            <MudButton OnClick="@(() => isDialogOpen = false)">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
 </MudContainer>
 
 @code {
     private bool loading = true;
     private List<ApiRoute> apis = new();
+    private bool isDialogOpen;
+    private ApiRoute? editingApi;
+    private string whitelistInput = "";
+    private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
 
     protected override async Task OnInitializedAsync()
     {
         // 模擬從 APISIX Admin API 讀取資料
         apis = await ApisixService.GetRoutesAsync();
         loading = false;
+    }
+
+    private void OpenEditDialog(ApiRoute api)
+    {
+        editingApi = api;
+        whitelistInput = string.Join(", ", api.WhitelistIps);
+        isDialogOpen = true;
+    }
+
+    private async Task SaveWhitelist()
+    {
+        if (editingApi != null)
+        {
+            editingApi.WhitelistIps = whitelistInput.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            // In a real app, call ApisixService.UpdateRouteAsync(editingApi)
+        }
+        isDialogOpen = false;
     }
 
     private Color GetRiskColor(string level) => level switch

@@ -22,6 +22,9 @@ namespace MilkApiManager.Models.Apisix
 
         [JsonPropertyName("service_id")]
         public string ServiceId { get; set; }
+
+        [JsonPropertyName("plugins")]
+        public Dictionary<string, object>? Plugins { get; set; }
     }
 
     public class Service
