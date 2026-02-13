@@ -22,9 +22,18 @@ namespace MilkAdminBlazor.Data
     {
         [JsonPropertyName("ip")]
         public string Ip { get; set; }
-        
+
         [JsonPropertyName("action")]
         public string Action { get; set; }
+
+        [JsonPropertyName("reason")]
+        public string? Reason { get; set; }
+
+        [JsonPropertyName("addedBy")]
+        public string? AddedBy { get; set; }
+
+        [JsonPropertyName("expiresAt")]
+        public DateTime? ExpiresAt { get; set; }
     }
 
     public class ApiConsumer
@@ -123,22 +132,40 @@ namespace MilkAdminBlazor.Data
             };
         }
 
-        public async Task<List<string>> GetBlacklistedIpsAsync()
+        public class BlacklistEntryDto
+        {
+            [JsonPropertyName("ipOrCidr")]
+            public string IpOrCidr { get; set; }
+
+            [JsonPropertyName("reason")]
+            public string? Reason { get; set; }
+
+            [JsonPropertyName("addedBy")]
+            public string? AddedBy { get; set; }
+
+            [JsonPropertyName("addedAt")]
+            public DateTime? AddedAt { get; set; }
+
+            [JsonPropertyName("expiresAt")]
+            public DateTime? ExpiresAt { get; set; }
+        }
+
+        public async Task<List<BlacklistEntryDto>> GetBlacklistedIpsAsync()
         {
             try
             {
-                var response = await _httpClient.GetFromJsonAsync<List<string>>("api/Blacklist");
-                return response ?? new List<string>();
+                var response = await _httpClient.GetFromJsonAsync<List<BlacklistEntryDto>>("api/Blacklist");
+                return response ?? new List<BlacklistEntryDto>();
             }
             catch
             {
-                return new List<string>();
+                return new List<BlacklistEntryDto>();
             }
         }
 
-        public async Task AddIpToBlacklistAsync(string ip)
+        public async Task AddIpToBlacklistAsync(string ip, string? reason = null, string? addedBy = null, DateTime? expiresAt = null)
         {
-            var request = new BlacklistRequest { Ip = ip, Action = "add" };
+            var request = new BlacklistRequest { Ip = ip, Action = "add", Reason = reason, AddedBy = addedBy, ExpiresAt = expiresAt };
             await _httpClient.PostAsJsonAsync("api/Blacklist", request);
         }
 
