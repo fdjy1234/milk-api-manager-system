@@ -34,6 +34,28 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     // For production, consider using db.Database.Migrate() instead of EnsureCreated
     db.Database.EnsureCreated();
+
+    // On startup: if configured to persist blacklist to DB, sync DB entries to APISIX
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var apisix = scope.ServiceProvider.GetRequiredService<ApisixClient>();
+    var persist = config.GetValue<bool>("Blacklist:PersistToDatabase");
+    if (persist)
+    {
+        var entries = db.BlacklistEntries.Select(e => e.IpOrCidr).ToList();
+        if (entries.Any())
+        {
+            // fire-and-forget sync
+            try
+            {
+                apisix.UpdateBlacklistAsync(entries).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+                logger.LogError(ex, "Failed to sync blacklist entries to APISIX on startup");
+            }
+        }
+    }
 }
 
 // Configure the HTTP request pipeline.
