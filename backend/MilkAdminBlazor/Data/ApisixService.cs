@@ -222,6 +222,27 @@ namespace MilkAdminBlazor.Data
             return stats;
         }
 
+        public async Task UpdateRouteAsync(ApiRoute route)
+        {
+            // Map frontend ApiRoute to the backend's expected APISIX route DTO
+            var plugins = new Dictionary<string, object>();
+            if (route.WhitelistIps != null && route.WhitelistIps.Any())
+            {
+                plugins["ip-restriction"] = new { whitelist = route.WhitelistIps };
+            }
+
+            var body = new
+            {
+                id = route.Id,
+                name = route.Name,
+                uris = new List<string> { route.Uri },
+                service_id = (string?)null,
+                plugins = plugins
+            };
+
+            await _httpClient.PutAsJsonAsync($"api/Route/{route.Id}", body);
+        }
+
         public async Task<List<AnalyticsResult>> GetAnalyticsRequestsAsync(string consumer, string route, DateTime? start, DateTime? end)
         {
             try

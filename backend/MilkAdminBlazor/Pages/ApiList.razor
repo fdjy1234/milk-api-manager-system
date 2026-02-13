@@ -85,7 +85,8 @@
         if (editingApi != null)
         {
             editingApi.WhitelistIps = whitelistInput.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
-            // In a real app, call ApisixService.UpdateRouteAsync(editingApi)
+            // Call backend to update route (which will translate whitelist into ip-restriction plugin)
+            await ApisixService.UpdateRouteAsync(editingApi);
         }
         isDialogOpen = false;
     }

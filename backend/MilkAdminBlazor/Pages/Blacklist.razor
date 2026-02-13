@@ -9,10 +9,16 @@
 
     <MudPaper Class="pa-4 mb-4" Elevation="3">
         <MudGrid>
-            <MudItem xs="8">
+            <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="newIp" Label="New IP Address" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. 192.168.1.1"></MudTextField>
             </MudItem>
-            <MudItem xs="4" Class="d-flex align-center">
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="reason" Label="Reason" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g. suspicious activity"></MudTextField>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudDatePicker T="DateTime?" @bind-Date="expiresAt" Label="Expires At" Clearable="true" Margin="Margin.Dense" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6" Class="d-flex align-center">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="AddIp">Add to Blacklist</MudButton>
             </MudItem>
         </MudGrid>
@@ -23,12 +29,14 @@
             <MudTh>IP Address</MudTh>
             <MudTh>Reason</MudTh>
             <MudTh>Added At</MudTh>
+            <MudTh>Expires At</MudTh>
             <MudTh Style="text-align:right">Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="IP Address">@context.IpOrCidr</MudTd>
             <MudTd DataLabel="Reason">@context.Reason</MudTd>
             <MudTd DataLabel="Added At">@context.AddedAt?.ToString("u")</MudTd>
+            <MudTd DataLabel="Expires At">@context.ExpiresAt?.ToString("u")</MudTd>
             <MudTd DataLabel="Actions" Style="text-align:right">
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => RemoveIp(context.IpOrCidr))" Size="Size.Small" />
             </MudTd>
@@ -43,6 +51,8 @@
     private bool loading = true;
     private List<ApisixService.BlacklistEntryDto> blacklistedIps = new();
     private string newIp = "";
+    private string? reason = null;
+    private DateTime? expiresAt = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,9 +74,11 @@
             return;
         }
 
-        await ApisixService.AddIpToBlacklistAsync(newIp);
+        await ApisixService.AddIpToBlacklistAsync(newIp, reason, addedBy: null, expiresAt);
         Snackbar.Add($"IP {newIp} added to blacklist.", Severity.Success);
         newIp = "";
+        reason = null;
+        expiresAt = null;
         await LoadData();
     }
 
