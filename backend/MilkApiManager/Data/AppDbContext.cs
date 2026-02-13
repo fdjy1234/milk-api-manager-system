@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
     public DbSet<AuditLogEntry> AuditLogs { get; set; }
     public DbSet<BlacklistEntry> BlacklistEntries { get; set; }
+    public DbSet<WhitelistEntry> WhitelistEntries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +25,16 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.IpOrCidr).IsRequired();
+            entity.Property(e => e.AddedAt).HasConversion(
+                v => v.ToUniversalTime(),
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+        });
+
+        modelBuilder.Entity<WhitelistEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RouteId).IsRequired();
+            entity.Property(e => e.IpCidr).IsRequired();
             entity.Property(e => e.AddedAt).HasConversion(
                 v => v.ToUniversalTime(),
                 v => DateTime.SpecifyKind(v, DateTimeKind.Utc));

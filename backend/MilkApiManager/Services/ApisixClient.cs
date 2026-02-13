@@ -210,6 +210,37 @@ namespace MilkApiManager.Services
             _logger.LogInformation($"Successfully updated plugin metadata: {pluginName}");
         }
 
+        // Whitelist helpers: store per-route whitelist under plugin_metadata/route-whitelist
+        public virtual async Task<List<string>> GetWhitelistForRouteAsync(string routeId)
+        {
+            var request = CreateRequest(HttpMethod.Get, "plugin_metadata/route-whitelist");
+            var response = await _httpClient.SendAsync(request);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return new List<string>();
+            }
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("value", out var value) &&
+                value.TryGetProperty(routeId, out var arr))
+            {
+                return JsonSerializer.Deserialize<List<string>>(arr.GetRawText()) ?? new List<string>();
+            }
+            return new List<string>();
+        }
+
+        public virtual async Task UpdateWhitelistForRouteAsync(string routeId, List<string> whitelist)
+        {
+            // fetch existing metadata
+            var bodyDoc = new Dictionary<string, object>();
+            bodyDoc[routeId] = whitelist;
+            var request = CreateRequest(HttpMethod.Put, "plugin_metadata/route-whitelist", bodyDoc);
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            _logger.LogInformation($"Successfully updated route whitelist for {routeId}");
+        }
+
         public virtual async Task CreateConsumerGroupAsync(string id, ConsumerGroup groupConfig)
         {
             var request = CreateRequest(HttpMethod.Put, $"consumer_groups/{id}", groupConfig);
