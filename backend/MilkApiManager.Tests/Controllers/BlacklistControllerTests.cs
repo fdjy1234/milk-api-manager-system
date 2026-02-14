@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MilkApiManager.Controllers;
@@ -17,6 +18,7 @@ public class BlacklistControllerTests : IDisposable
     private readonly Mock<ILogger<BlacklistController>> _mockLogger;
     private readonly AppDbContext _dbContext;
     private readonly IConfiguration _configuration;
+    private readonly Mock<AuditLogService> _mockAuditLog;
 
     public BlacklistControllerTests()
     {
@@ -27,6 +29,7 @@ public class BlacklistControllerTests : IDisposable
             Mock.Of<ILogger<ApisixClient>>()
         );
         _mockLogger = new Mock<ILogger<BlacklistController>>();
+        _mockAuditLog = new Mock<AuditLogService>(MockBehavior.Strict, Mock.Of<System.Net.Http.HttpClient>(), Mock.Of<IConfiguration>(), Mock.Of<IServiceScopeFactory>());
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -44,7 +47,7 @@ public class BlacklistControllerTests : IDisposable
             .AddInMemoryCollection(configData)
             .Build();
 
-        return new BlacklistController(_mockApisixClient.Object, _mockLogger.Object, _dbContext, config);
+        return new BlacklistController(_mockApisixClient.Object, _mockLogger.Object, _dbContext, config, _mockAuditLog.Object);
     }
 
     [Fact]
@@ -108,6 +111,10 @@ public class BlacklistControllerTests : IDisposable
             AddedBy = "admin"
         };
 
+        // Expect audit log to be called with Action = "Blacklist.Add"
+        _mockAuditLog.Setup(a => a.LogAsync(It.Is<Models.AuditLogEntry>(e => e.Action == "Blacklist.Add")))
+            .Returns(Task.CompletedTask);
+
         // Act
         var result = await controller.UpdateBlacklist(request);
 
@@ -115,6 +122,7 @@ public class BlacklistControllerTests : IDisposable
         var okResult = Assert.IsType<OkObjectResult>(result);
         _mockApisixClient.Verify(c => c.UpdateBlacklistAsync(
             It.Is<List<string>>(l => l.Contains("192.168.1.200"))), Times.Once);
+        _mockAuditLog.Verify(a => a.LogAsync(It.Is<Models.AuditLogEntry>(e => e.Action == "Blacklist.Add")), Times.Once);
 
         // Verify DB persistence
         var entry = await _dbContext.BlacklistEntries.FirstOrDefaultAsync(b => b.IpOrCidr == "192.168.1.200");
@@ -141,11 +149,16 @@ public class BlacklistControllerTests : IDisposable
         var controller = CreateController(persistToDb: true);
         var request = new BlacklistUpdateRequest { Ip = "10.0.0.5", Action = "remove" };
 
+        // Expect audit log to be called with Action = "Blacklist.Remove"
+        _mockAuditLog.Setup(a => a.LogAsync(It.Is<Models.AuditLogEntry>(e => e.Action == "Blacklist.Remove")))
+            .Returns(Task.CompletedTask);
+
         // Act
         var result = await controller.UpdateBlacklist(request);
 
         // Assert
         Assert.IsType<OkObjectResult>(result);
+        _mockAuditLog.Verify(a => a.LogAsync(It.Is<Models.AuditLogEntry>(e => e.Action == "Blacklist.Remove")), Times.Once);
         var entry = await _dbContext.BlacklistEntries.FirstOrDefaultAsync(b => b.IpOrCidr == "10.0.0.5");
         Assert.Null(entry);
     }
