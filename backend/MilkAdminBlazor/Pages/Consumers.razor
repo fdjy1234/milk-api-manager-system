@@ -31,7 +31,7 @@
 
 <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AddConsumer" Class="mt-4">新增消費者</MudButton>
 
-<MudDialog @bind-IsVisible="_editDialogOpen" Options="_dialogOptions">
+<MudDialog @bind-Visible="_editDialogOpen" Options="_dialogOptions">
     <TitleContent>
         <MudText Typo="Typo.h6">
             @(_isEditing ? "編輯消費者" : "新增消費者")
@@ -90,7 +90,7 @@
     private bool _loading = true;
     private bool _editDialogOpen;
     private bool _isEditing;
-    private ApiConsumer _currentConsumer = new();
+    private ApiConsumer _currentConsumer = new() { Username = string.Empty, Desc = string.Empty };
     private string _labelsText = "";
     private DialogOptions _dialogOptions = new() { FullWidth = true };
 
@@ -114,7 +114,7 @@
     private void AddConsumer()
     {
         _isEditing = false;
-        _currentConsumer = new ApiConsumer();
+        _currentConsumer = new ApiConsumer { Username = string.Empty, Desc = string.Empty };
         _labelsText = "";
         _selectedRoles.Clear();
         _selectedScopes.Clear();

@@ -7,14 +7,14 @@ namespace MilkApiManager.Models
         public string Id { get; set; } = Guid.NewGuid().ToString();
         
         [Required]
-        public string Name { get; set; }
+        public required string Name { get; set; }
         
         [Required]
-        public string MetricName { get; set; } // e.g., "http_5xx_spikes", "high_frequency_ip"
+        public required string MetricName { get; set; } // e.g., "http_5xx_spikes", "high_frequency_ip"
         
         public double Threshold { get; set; }
         
-        public string Duration { get; set; } // e.g., "5m"
+        public required string Duration { get; set; } // e.g., "5m"
         
         public bool IsEnabled { get; set; } = true;
         
@@ -25,10 +25,10 @@ namespace MilkApiManager.Models
 
     public class AnomalyAlert
     {
-        public string RuleId { get; set; }
-        public string RuleName { get; set; }
-        public string MetricValue { get; set; }
+        public required string RuleId { get; set; }
+        public required string RuleName { get; set; }
+        public required string MetricValue { get; set; }
         public DateTime Timestamp { get; set; }
-        public string Message { get; set; }
+        public required string Message { get; set; }
     }
 }

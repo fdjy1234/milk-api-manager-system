@@ -9,10 +9,10 @@ namespace MilkApiManager.Models
         public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public string RouteId { get; set; }
+        public required string RouteId { get; set; }
 
         [Required]
-        public string IpCidr { get; set; }
+        public required string IpCidr { get; set; }
 
         public string? Reason { get; set; }
 

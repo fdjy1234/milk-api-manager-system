@@ -10,21 +10,21 @@ namespace MilkAdminBlazor.Data
 {
     public class ApiRoute
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public string Uri { get; set; }
-        public string RiskLevel { get; set; } // L1, L2, L3
-        public string Owner { get; set; }
+        public required string Id { get; set; }
+        public required string Name { get; set; }
+        public required string Uri { get; set; }
+        public required string RiskLevel { get; set; } // L1, L2, L3
+        public required string Owner { get; set; }
         public List<string> WhitelistIps { get; set; } = new();
     }
 
     public class BlacklistRequest
     {
         [JsonPropertyName("ip")]
-        public string Ip { get; set; }
+        public required string Ip { get; set; }
 
         [JsonPropertyName("action")]
-        public string Action { get; set; }
+        public required string Action { get; set; }
 
         [JsonPropertyName("reason")]
         public string? Reason { get; set; }
@@ -39,10 +39,10 @@ namespace MilkAdminBlazor.Data
     public class ApiConsumer
     {
         [JsonPropertyName("username")]
-        public string Username { get; set; }
+        public required string Username { get; set; }
 
         [JsonPropertyName("desc")]
-        public string Desc { get; set; }
+        public required string Desc { get; set; }
 
         [JsonPropertyName("labels")]
         public List<string> Labels { get; set; } = new List<string>();
@@ -69,7 +69,7 @@ namespace MilkAdminBlazor.Data
     public class SyncStatusResponse
     {
         [JsonPropertyName("status")]
-        public string Status { get; set; }
+        public required string Status { get; set; }
 
         [JsonPropertyName("lastSyncTime")]
         public DateTime? LastSyncTime { get; set; }
@@ -77,7 +77,7 @@ namespace MilkAdminBlazor.Data
 
     public class ConsumerStats
     {
-        public string Username { get; set; }
+        public required string Username { get; set; }
         public long RequestCount { get; set; }
         public double ErrorRate { get; set; } // Percentage
         public DateTime Timestamp { get; set; }
@@ -94,7 +94,7 @@ namespace MilkAdminBlazor.Data
     public class AnalyticsResult
     {
         [JsonPropertyName("label")]
-        public string Label { get; set; }
+        public required string Label { get; set; }
         [JsonPropertyName("data")]
         public List<MetricPoint> Data { get; set; } = new();
     }
@@ -135,7 +135,7 @@ namespace MilkAdminBlazor.Data
         public class BlacklistEntryDto
         {
             [JsonPropertyName("ipOrCidr")]
-            public string IpOrCidr { get; set; }
+            public required string IpOrCidr { get; set; }
 
             [JsonPropertyName("reason")]
             public string? Reason { get; set; }
@@ -280,7 +280,7 @@ namespace MilkAdminBlazor.Data
         public class WhitelistEntryDto
         {
             [JsonPropertyName("ip")]
-            public string Ip { get; set; }
+            public required string Ip { get; set; }
 
             [JsonPropertyName("reason")]
             public string? Reason { get; set; }

@@ -150,7 +150,7 @@ namespace MilkApiManager.Controllers
 
     public class BlacklistUpdateRequest
     {
-        public string Ip { get; set; }
+        public required string Ip { get; set; }
         public string Action { get; set; } = "add"; // add | remove
         public string? Reason { get; set; }
         public string? AddedBy { get; set; }

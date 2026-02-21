@@ -163,7 +163,7 @@ namespace MilkApiManager.Controllers
 
     public class WhitelistUpdateRequest
     {
-        public string IpCidr { get; set; }
+        public required string IpCidr { get; set; }
         public string Action { get; set; } = "add"; // add | remove
         public string? Reason { get; set; }
         public string? AddedBy { get; set; }

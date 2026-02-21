@@ -26,8 +26,8 @@ public class SecurityAutomationService
         // 模擬從資料庫讀取金鑰資訊
         var keys = new List<ApiKey>
         {
-            new ApiKey { Owner = "tsp-partner-01", ExpiresAt = DateTime.UtcNow.AddDays(5), ContactEmail = "dev@tsp.com", LastRotatedAt = DateTime.UtcNow.AddDays(-85) },
-            new ApiKey { Owner = "payment-gateway", ExpiresAt = DateTime.UtcNow.AddDays(-1), ContactEmail = "admin@pay.com", LastRotatedAt = DateTime.UtcNow.AddDays(-91) }
+            new ApiKey { Owner = "tsp-partner-01", ExpiresAt = DateTime.UtcNow.AddDays(5), ContactEmail = "dev@tsp.com", LastRotatedAt = DateTime.UtcNow.AddDays(-85), KeyHash = "mock_hash_1", Scopes = "read" },
+            new ApiKey { Owner = "payment-gateway", ExpiresAt = DateTime.UtcNow.AddDays(-1), ContactEmail = "admin@pay.com", LastRotatedAt = DateTime.UtcNow.AddDays(-91), KeyHash = "mock_hash_2", Scopes = "admin" }
         };
 
         foreach (var key in keys)

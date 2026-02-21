@@ -3,8 +3,8 @@
 @using MudBlazor
 
 @code {
-    [Parameter]
-    public string RouteId { get; set; }
+    [Parameter, EditorRequired]
+    public required string RouteId { get; set; }
 
     private List<ApisixService.WhitelistEntryDto> entries = new();
 

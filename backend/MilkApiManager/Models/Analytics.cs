@@ -17,7 +17,7 @@ namespace MilkApiManager.Models
 
     public class AnalyticsResult
     {
-        public string Label { get; set; }
+        public required string Label { get; set; }
         public List<MetricPoint> Data { get; set; } = new();
     }
 }
