@@ -14,13 +14,15 @@ namespace MilkApiManager.Controllers
         private readonly ILogger<BlacklistController> _logger;
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly AuditLogService _auditLog;
 
-        public BlacklistController(ApisixClient apisixClient, ILogger<BlacklistController> logger, AppDbContext db, IConfiguration config)
+        public BlacklistController(ApisixClient apisixClient, ILogger<BlacklistController> logger, AppDbContext db, IConfiguration config, AuditLogService auditLog)
         {
             _apisixClient = apisixClient;
             _logger = logger;
             _db = db;
             _config = config;
+            _auditLog = auditLog;
         }
 
         [HttpGet]
@@ -79,6 +81,22 @@ namespace MilkApiManager.Controllers
                             };
                             _db.BlacklistEntries.Add(entry);
                             await _db.SaveChangesAsync();
+
+                            // Audit log for blacklist add
+                            try
+                            {
+                                await _auditLog.LogAsync(new Models.AuditLogEntry
+                                {
+                                    Action = "Blacklist.Add",
+                                    Resource = "Blacklist",
+                                    User = request.AddedBy ?? "Unknown",
+                                    Details = new { Ip = request.Ip, Reason = request.Reason, ExpiresAt = request.ExpiresAt }
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to write audit log for blacklist add {Ip}", request.Ip);
+                            }
                         }
                     }
                 }
@@ -90,8 +108,27 @@ namespace MilkApiManager.Controllers
                         var exists = await _db.BlacklistEntries.FirstOrDefaultAsync(b => b.IpOrCidr == request.Ip);
                         if (exists != null)
                         {
+                            // capture details before removal
+                            var details = new { Ip = exists.IpOrCidr, Reason = exists.Reason, ExpiresAt = exists.ExpiresAt };
+
                             _db.BlacklistEntries.Remove(exists);
                             await _db.SaveChangesAsync();
+
+                            // Audit log for blacklist remove
+                            try
+                            {
+                                await _auditLog.LogAsync(new Models.AuditLogEntry
+                                {
+                                    Action = "Blacklist.Remove",
+                                    Resource = "Blacklist",
+                                    User = request.AddedBy ?? "Unknown",
+                                    Details = details
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to write audit log for blacklist remove {Ip}", request.Ip);
+                            }
                         }
                     }
                 }
