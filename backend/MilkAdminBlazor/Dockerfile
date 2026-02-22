@@ -1,13 +1,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-# Copy both projects to allow project references to resolve
+
+# Copy project files first to leverage Docker cache
 COPY ["MilkAdminBlazor/MilkAdminBlazor.csproj", "MilkAdminBlazor/"]
 COPY ["MilkApiManager/MilkApiManager.csproj", "MilkApiManager/"]
 RUN dotnet restore "MilkAdminBlazor/MilkAdminBlazor.csproj"
 
+# Copy the rest of the source code
 COPY . .
+
+# Explicitly build and publish ONLY the Blazor project to avoid appsettings.json collision
 WORKDIR "/src/MilkAdminBlazor"
-RUN dotnet publish "MilkAdminBlazor.csproj" -c Release -o /app/publish
+RUN dotnet publish "MilkAdminBlazor.csproj" -c Release -o /app/publish /p:ErrorOnDuplicatePublishOutputFiles=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
