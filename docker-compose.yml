@@ -111,7 +111,7 @@ services:
       - apisix
 
   milk-db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     restart: always
     environment:
       - POSTGRES_USER=milk_user
