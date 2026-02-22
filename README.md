@@ -33,11 +33,6 @@ Milk API Manager 是一套基於 **Apache APISIX** 打造的現代化 API 管理
 
 ```mermaid
 flowchart TB
-    subgraph "External Nodes"
-        VPSA["VPS A (Logic Node)"]
-        VPSB["VPS B (UI Node)"]
-    end
-
     subgraph "Control Plane (.NET 8)"
         UI["Admin UI (Blazor)"]
         API["Management API"]
@@ -55,7 +50,6 @@ flowchart TB
         ELK[ELK Stack 9.2.3]
     end
 
-    VPSA & VPSB -->|Git| API
     UI --> API
     API -->|Sync| GW
     GW -->|Metrics| PROM
