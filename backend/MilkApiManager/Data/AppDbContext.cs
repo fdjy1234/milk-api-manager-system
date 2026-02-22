@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<MockRule> MockRules { get; set; }
     public DbSet<AccessRequest> AccessRequests { get; set; }
     public DbSet<ApiServiceMetadata> ApiServices { get; set; }
+    public DbSet<ApiTestScenario> ApiTestScenarios { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

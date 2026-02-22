@@ -94,17 +94,33 @@ using (var scope = app.Services.CreateScope())
         // 2. Register this service in API Catalog
         try 
         {
-            var catalog = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            if (!catalog.ApiServices.Any(s => s.Name == "Milk Manager Core"))
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var coreService = dbContext.ApiServices.FirstOrDefault(s => s.Name == "Milk Manager Core");
+            
+            if (coreService == null)
             {
-                catalog.ApiServices.Add(new ApiServiceMetadata {
+                coreService = new ApiServiceMetadata {
                     Name = "Milk Manager Core",
                     Description = "Central API Management Control Plane",
                     BasePath = "/api",
                     OpenApiUrl = "http://localhost:5001/swagger/v1/swagger.json",
                     OwnerTeam = "Platform Team"
+                };
+                dbContext.ApiServices.Add(coreService);
+                dbContext.SaveChanges();
+            }
+
+            // Seed a default test scenario
+            if (!dbContext.ApiTestScenarios.Any(s => s.ServiceId == coreService.Id))
+            {
+                dbContext.ApiTestScenarios.Add(new ApiTestScenario {
+                    ServiceId = coreService.Id,
+                    Name = "Health Check",
+                    Endpoint = "/AuditLogs/stats",
+                    HttpMethod = "GET",
+                    ExpectedStatusCode = 200
                 });
-                catalog.SaveChanges();
+                dbContext.SaveChanges();
             }
         }
         catch { /* Log error */ }

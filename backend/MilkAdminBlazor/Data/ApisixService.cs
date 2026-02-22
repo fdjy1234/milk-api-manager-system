@@ -529,5 +529,29 @@ namespace MilkAdminBlazor.Data
             try { return await _httpClient.GetFromJsonAsync<List<ApiServiceDto>>("api/ApiCatalog") ?? new(); }
             catch { return new(); }
         }
+
+        // --- API Testing ---
+        public class TestScenarioDto
+        {
+            public int Id { get; set; }
+            public int ServiceId { get; set; }
+            public string Name { get; set; } = "";
+            public string Endpoint { get; set; } = "/";
+            public string HttpMethod { get; set; } = "GET";
+            public int ExpectedStatusCode { get; set; } = 200;
+            public string? LastResult { get; set; }
+            public DateTime? LastRunAt { get; set; }
+        }
+
+        public async Task<List<TestScenarioDto>> GetTestScenariosAsync(int serviceId)
+        {
+            try { return await _httpClient.GetFromJsonAsync<List<TestScenarioDto>>($"api/TestExecution/scenarios/{serviceId}") ?? new(); }
+            catch { return new(); }
+        }
+
+        public async Task RunApiTestAsync(int scenarioId)
+        {
+            await _httpClient.PostAsync($"api/TestExecution/run/{scenarioId}", null);
+        }
     }
 }
