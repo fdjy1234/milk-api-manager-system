@@ -1,6 +1,6 @@
 const { defineConfig } = require('@playwright/test');
 
-const baseURL = process.env.BASE_URL || 'http://localhost:5002';
+const baseURL = process.env.BASE_URL || 'http://localhost:5000';
 
 module.exports = defineConfig({
   testDir: './tests',

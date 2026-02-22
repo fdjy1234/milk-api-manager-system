@@ -111,10 +111,10 @@ services = [
 for service_name, url in services:
     try:
         response = requests.get(url, timeout=5)
-        status = "✓ UP" if response.status_code < 400 else f"✗ DOWN ({response.status_code})"
+        status = "UP" if response.status_code < 400 else f"DOWN ({response.status_code})"
         print(f"{service_name:.<40} {status}")
     except Exception as e:
-        print(f"{service_name:.<40} ✗ UNREACHABLE")
+        print(f"{service_name:.<40} UNREACHABLE")
 
 print("\n" + "="*60)
 print("Test Suite Complete")

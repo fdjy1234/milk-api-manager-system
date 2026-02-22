@@ -16,7 +16,7 @@ $required = @("apisix", "etcd", "prometheus", "grafana")
 $missing = @()
 
 foreach ($r in $required) {
-    if ($containers -notmatch $r) { $missing += $r }
+    if (!($containers -match $r)) { $missing += $r }
 }
 
 if ($missing.Count -gt 0) {
@@ -50,6 +50,7 @@ if ($smokeExitCode -eq 0) {
 
 # 4. Playwright E2E Tests (UI & Gateway)
 Write-Host "`n[Step 4/4] Running Playwright E2E Tests..." -ForegroundColor Yellow
+$env:BASE_URL = "http://localhost:5000"
 Set-Location e2e
 $e2eResult = npm test
 $e2eExitCode = $LASTEXITCODE
