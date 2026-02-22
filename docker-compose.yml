@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   apisix:
     image: apache/apisix:3.11.0-debian
@@ -78,7 +76,7 @@ services:
       - apisix
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.3
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -89,7 +87,7 @@ services:
       - apisix
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:8.17.1
+    image: docker.elastic.co/logstash/logstash:9.2.3
     volumes:
       - ./monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     ports:
@@ -101,7 +99,7 @@ services:
       - apisix
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.17.1
+    image: docker.elastic.co/kibana/kibana:9.2.3
     environment:
       - xpack.security.enabled=false
     ports:
