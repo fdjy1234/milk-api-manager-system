@@ -129,8 +129,8 @@ services:
 
   milk-admin-ui:
     build:
-      context: ./backend/MilkAdminBlazor
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: MilkAdminBlazor/Dockerfile
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
