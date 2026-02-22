@@ -553,5 +553,11 @@ namespace MilkAdminBlazor.Data
         {
             await _httpClient.PostAsync($"api/TestExecution/run/{scenarioId}", null);
         }
+
+        public async Task<List<AnalyticsResult>> GetTopSlowRoutesAsync()
+        {
+            try { return await _httpClient.GetFromJsonAsync<List<AnalyticsResult>>("api/Analytics/top-slow-routes") ?? new(); }
+            catch { return new(); }
+        }
     }
 }

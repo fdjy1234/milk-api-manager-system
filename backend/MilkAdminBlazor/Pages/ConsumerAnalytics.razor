@@ -1,85 +1,106 @@
 @page "/consumer-analytics"
 @using MilkAdminBlazor.Data
+@using System.Timers
 @inject ApisixService ApisixService
+@implements IDisposable
 
-<MudText Typo="Typo.h4" GutterBottom="true">API 消費者統計報表 (Consumer Statistics)</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Large" Class="mr-2"/> Traffic Intelligence Center</MudText>
+        <div class="d-flex align-center">
+            <MudText Typo="Typo.body2" Class="mr-2">Auto-Refresh (15s)</MudText>
+            <MudSwitch @bind-Value="_autoRefresh" Color="Color.Primary" T="bool" />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Inherit" OnClick="RefreshData" Disabled="_loading" />
+        </div>
+    </div>
 
-<MudPaper Class="pa-4 mb-4">
-    <MudGrid>
-        <MudItem xs="12" sm="3">
-            <MudSelect T="string" Label="Consumer" @bind-Value="_selectedConsumer">
-                <MudSelectItem Value="@("")">All Consumers</MudSelectItem>
-                @foreach (var consumer in _consumers)
-                {
-                    <MudSelectItem Value="@consumer.Username">@consumer.Username</MudSelectItem>
-                }
-            </MudSelect>
-        </MudItem>
-        <MudItem xs="12" sm="3">
-            <MudAutocomplete T="string" Label="API Route" @bind-Value="_selectedRoute" SearchFunc="@SearchRoutes" />
-        </MudItem>
-        <MudItem xs="12" sm="3">
-            <MudDateRangePicker Label="Time Range" @bind-DateRange="_dateRange" />
-        </MudItem>
-        <MudItem xs="12" sm="3" Class="d-flex align-end">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshData" FullWidth="true">Apply Filter</MudButton>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+    <MudPaper Class="pa-4 mb-6 shadow-sm border-0">
+        <MudGrid>
+            <MudItem xs="12" sm="3">
+                <MudSelect T="string" Label="Consumer Filter" @bind-Value="_selectedConsumer" Dense="true" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("")">All Consumers</MudSelectItem>
+                    @foreach (var c in _consumers) { <MudSelectItem Value="@c.Username">@c.Username</MudSelectItem> }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudAutocomplete T="string" Label="Route Filter" @bind-Value="_selectedRoute" SearchFunc="@SearchRoutes" Dense="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudDateRangePicker Label="Time Horizon" @bind-DateRange="_dateRange" Dense="true" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="2" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="RefreshData" FullWidth="true">Apply</MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-@if (_loading)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
-}
-else
-{
-    <MudGrid>
-        <MudItem xs="12" md="6">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Request Throughput (req/s)</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart ChartType="ChartType.Line" ChartSeries="@_requestSeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="350px" />
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" md="6">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">P95 Latency (ms)</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart ChartType="ChartType.Line" ChartSeries="@_latencySeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="350px" />
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12">
-            <MudCard Elevation="2">
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Error Rate (%)</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudChart ChartType="ChartType.Line" ChartSeries="@_errorSeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="350px" />
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
-}
+    @if (_loading && !_requestSeries.Any())
+    {
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudGrid>
+            <!-- Row 1: Key Performance Indicators -->
+            <MudItem xs="12" md="8">
+                <MudCard Elevation="3" Class="rounded-lg h-100">
+                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.h6">P95 Latency Curve (ms)</MudText></CardHeaderContent></MudCardHeader>
+                    <MudCardContent>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@_latencySeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="350px" />
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="3" Class="rounded-lg h-100 bg-dark text-white">
+                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.h6" Class="text-white">Performance Bottlenecks (Top 5)</MudText></CardHeaderContent></MudCardHeader>
+                    <MudCardContent>
+                        <MudSimpleTable Style="background: transparent; color: white;">
+                            <thead><tr><th>Route</th><th>Lat (ms)</th></tr></thead>
+                            <tbody>
+                                @foreach (var slow in _slowRoutes)
+                                {
+                                    <tr>
+                                        <td><code class="text-info">@slow.Label</code></td>
+                                        <td><MudText Color="Color.Error">@Math.Round(slow.Data.LastOrDefault()?.Value ?? 0, 1)</MudText></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Row 2: Throughput and Errors -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="3" Class="rounded-lg">
+                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.h6">Throughput (Requests / Second)</MudText></CardHeaderContent></MudCardHeader>
+                    <MudCardContent>
+                        <MudChart ChartType="ChartType.Bar" ChartSeries="@_requestSeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="300px" />
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="3" Class="rounded-lg border-l-4 border-error">
+                    <MudCardHeader><CardHeaderContent><MudText Typo="Typo.h6" Color="Color.Error">System Reliability (Error %)</MudText></CardHeaderContent></MudCardHeader>
+                    <MudCardContent>
+                        <MudChart ChartType="ChartType.Line" ChartSeries="@_errorSeries" XAxisLabels="@_xAxisLabels" Width="100%" Height="300px" />
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
 
 @code {
     private bool _loading = true;
+    private bool _autoRefresh = false;
     private string _selectedConsumer = "";
     private string _selectedRoute = "";
     private DateRange _dateRange = new DateRange(DateTime.Now.Date.AddDays(-1), DateTime.Now.Date);
     private List<ApiConsumer> _consumers = new();
     private List<ApiRoute> _routes = new();
+    private List<AnalyticsResult> _slowRoutes = new();
+    private Timer? _timer;
 
     private List<ChartSeries> _requestSeries = new();
     private List<ChartSeries> _latencySeries = new();
@@ -91,11 +112,21 @@ else
         _consumers = await ApisixService.GetConsumersAsync();
         _routes = await ApisixService.GetRoutesAsync();
         await RefreshData();
+        
+        _timer = new Timer(15000); // 15 seconds
+        _timer.Elapsed += async (s, e) => await InvokeAsync(OnTimerTick);
+        _timer.Start();
+    }
+
+    private async Task OnTimerTick()
+    {
+        if (_autoRefresh && !_loading) await RefreshData();
     }
 
     private async Task RefreshData()
     {
         _loading = true;
+        StateHasChanged();
         
         var start = _dateRange.Start ?? DateTime.Now.AddDays(-1);
         var end = _dateRange.End ?? DateTime.Now;
@@ -103,28 +134,24 @@ else
         var requests = await ApisixService.GetAnalyticsRequestsAsync(_selectedConsumer, _selectedRoute, start, end);
         var latencies = await ApisixService.GetAnalyticsLatencyAsync(_selectedConsumer, _selectedRoute, start, end);
         var errors = await ApisixService.GetAnalyticsErrorsAsync(_selectedConsumer, _selectedRoute, start, end);
+        _slowRoutes = await ApisixService.GetTopSlowRoutesAsync();
 
         _requestSeries = requests.Select(r => new ChartSeries { Name = r.Label, Data = r.Data.Select(d => d.Value).ToArray() }).ToList();
         _latencySeries = latencies.Select(r => new ChartSeries { Name = r.Label, Data = r.Data.Select(d => d.Value).ToArray() }).ToList();
         _errorSeries = errors.Select(r => new ChartSeries { Name = r.Label, Data = r.Data.Select(d => d.Value).ToArray() }).ToList();
 
-        // Simple X-Axis labels (just time)
         if (requests.Any() && requests[0].Data.Any())
-        {
             _xAxisLabels = requests[0].Data.Select(d => d.Timestamp.ToString("HH:mm")).ToArray();
-        }
-        else
-        {
-            _xAxisLabels = Array.Empty<string>();
-        }
 
         _loading = false;
+        StateHasChanged();
     }
 
     private async Task<IEnumerable<string>> SearchRoutes(string value, CancellationToken token)
     {
-        if (string.IsNullOrEmpty(value))
-            return _routes.Select(r => r.Uri);
+        if (string.IsNullOrEmpty(value)) return _routes.Select(r => r.Uri);
         return _routes.Where(x => x.Uri.Contains(value, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Uri);
     }
+
+    public void Dispose() => _timer?.Dispose();
 }
