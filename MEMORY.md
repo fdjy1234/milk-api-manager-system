@@ -27,5 +27,14 @@ If something needs attention, do NOT include "HEARTBEAT_OK"; reply with the aler
 - **Mandatory Verification**: BEFORE any `git push` or concluding a task, you MUST run `./scripts/verify-all.sh` (Linux) or `./scripts/verify-all.ps1` (Windows).
 - **Zero-Failure Policy**: Never commit or push if any test in the verification suite fails.
 - **Reporting**: Always check `E2E_TEST_REPORT.md` after running the verification script to confirm all components are green.
-- **Concurrent Safety**: When operating on two VPS, read `HEARTBEAT.md` first to avoid modifying the same controller or service simultaneously.
 - **Code Style**: Adhere to existing .NET naming conventions and ensure PII masking logic is covered by at least one E2E test.
+
+## Multi-VPS Collaboration (多節點協作規範)
+- **Central Repository**: Both VPS must use `tedtv1007-ctrl/milk-api-manager-system` as the main remote `origin`.
+- **Sync Protocol**:
+    1. START: Always run `git pull origin main` before any research or coding.
+    2. CLAIM: Write your status to `HEARTBEAT.md` (e.g., `VPS_A: Fixing Issue #123`) before starting.
+    3. PUSH: Push frequently in small batches to avoid long-running conflicts.
+- **Environment Context**:
+    - **Zeabur Environment**: Full Docker tests may fail. Focus on passing `dotnet test` (Step 2) before pushing.
+    - **GitHub CI**: Rely on Repo B's GitHub Actions for full integration (Docker/E2E) verification.
