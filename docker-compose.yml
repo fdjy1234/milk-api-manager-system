@@ -93,6 +93,7 @@ services:
     ports:
       - "5044:5044"
       - "8080:8080"
+      - "8081:8081"
     depends_on:
       - elasticsearch
     networks:

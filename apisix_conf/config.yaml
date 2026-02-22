@@ -28,6 +28,7 @@ plugins:
   - key-auth
   - opentelemetry
   - traffic-blocker
+  - http-logger
 
 plugin_attr:
   prometheus:
@@ -37,7 +38,7 @@ plugin_attr:
   opentelemetry:
     resource:
       service.name: "apisix-gateway"
-      instance.id: "\$hostname"
+      instance.id: '$hostname'
     collector:
       address: "jaeger:4317"
       request_timeout: 3

@@ -37,6 +37,14 @@ public class AuditLogService
         var json = JsonSerializer.Serialize(entry, options);
         Console.WriteLine(json);
 
+        // Ship to Logstash
+        try
+        {
+            var logstashUrl = Environment.GetEnvironmentVariable("LOGSTASH_URL") ?? "http://logstash:8080";
+            _httpClient.PostAsJsonAsync(logstashUrl, entry).ConfigureAwait(false);
+        }
+        catch { /* Fire and forget, don't block main flow */ }
+
         // 2. Database Logging (Configurable)
         bool enableDb = _configuration.GetValue<bool>("AuditLog:EnableDatabaseWrite");
         if (enableDb)
