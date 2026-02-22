@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
+using MilkApiManager.Data;
 using MilkApiManager.Models;
-using System.Net.Mail;
+using System.Text.Json;
 
 namespace MilkApiManager.Services
 {
@@ -7,56 +9,78 @@ namespace MilkApiManager.Services
     {
         private readonly ILogger<NotificationService> _logger;
         private readonly HttpClient _httpClient;
-        private readonly string _mattermostWebhookUrl;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public NotificationService(ILogger<NotificationService> logger, HttpClient httpClient)
+        public NotificationService(ILogger<NotificationService> logger, HttpClient httpClient, IServiceScopeFactory scopeFactory)
         {
             _logger = logger;
             _httpClient = httpClient;
-            _mattermostWebhookUrl = Environment.GetEnvironmentVariable("MATTERMOST_WEBHOOK_URL") ?? "http://mattermost:8065/hooks/default";
+            _scopeFactory = scopeFactory;
         }
 
-        public async Task SendNotificationAsync(AlertRule rule, string message)
+        public async Task AlertAsync(string title, string message, bool isCritical = false)
         {
-            foreach (var channel in rule.NotificationChannels)
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            
+            var channels = await dbContext.NotificationChannels
+                .Where(c => c.IsEnabled)
+                .ToListAsync();
+
+            if (!channels.Any())
             {
-                if (channel == "Mattermost")
+                _logger.LogWarning("No notification channels configured. Alert suppressed: {Title}", title);
+                return;
+            }
+
+            foreach (var channel in channels)
+            {
+                if (channel.CriticalOnly && !isCritical) continue;
+
+                if (channel.Type == "Webhook")
                 {
-                    await SendToMattermostAsync(message);
+                    await SendWebhookAsync(channel.Target, title, message, isCritical);
                 }
-                else if (channel == "Email")
+                else if (channel.Type == "Email")
                 {
-                    await SendEmailAsync(message);
+                    _logger.LogInformation("[EMAIL MOCK] To: {Target}, Subject: {Title}, Body: {Message}", channel.Target, title, message);
                 }
             }
         }
 
-        private async Task SendToMattermostAsync(string message)
+        private async Task SendWebhookAsync(string url, string title, string message, bool isCritical)
         {
             try
             {
-                var payload = new { text = $"### 🚨 API Anomaly Alert\n{message}" };
-                var response = await _httpClient.PostAsJsonAsync(_mattermostWebhookUrl, payload);
-                if (response.IsSuccessStatusCode)
+                var icon = isCritical ? "🚨" : "📢";
+                var color = isCritical ? "#FF0000" : "#36a64f";
+                
+                // Generic Payload (Slack/Mattermost compatible)
+                var payload = new 
+                { 
+                    text = $"{icon} **{title}**\n{message}",
+                    username = "Milk API Guardian",
+                    icon_emoji = ":shield:",
+                    attachments = new[] {
+                        new {
+                            color = color,
+                            title = title,
+                            text = message,
+                            ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                        }
+                    }
+                };
+
+                var response = await _httpClient.PostAsJsonAsync(url, payload);
+                if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogInformation("Sent notification to Mattermost");
-                }
-                else
-                {
-                    _logger.LogError("Failed to send Mattermost notification: {Status}", response.StatusCode);
+                    _logger.LogError("Webhook failed: {Url} {Status}", url, response.StatusCode);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending Mattermost notification");
+                _logger.LogError(ex, "Error sending webhook to {Url}", url);
             }
-        }
-
-        private async Task SendEmailAsync(string message)
-        {
-            // Dummy email implementation
-            _logger.LogInformation("[EMAIL NOTIFICATION] To: admin@milk.com, Msg: {Message}", message);
-            await Task.CompletedTask;
         }
     }
 }

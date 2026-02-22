@@ -88,7 +88,7 @@ namespace MilkApiManager.Services
                     _logger.LogWarning("ALERT TRIGGERED: {RuleName} - Value: {Value}", rule.Name, latestPoint.Value);
                     
                     var message = $"Alert '{rule.Name}' triggered! Metric: {rule.MetricName}, Value: {latestPoint.Value}, Threshold: {rule.Threshold}";
-                    await notifier.SendNotificationAsync(rule, message);
+                    await notifier.AlertAsync($"🔥 Alert: {rule.Name}", message, isCritical: true);
                 }
             }
         }

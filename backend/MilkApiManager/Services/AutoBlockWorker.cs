@@ -44,7 +44,8 @@ public class AutoBlockWorker : BackgroundService
         using var scope = _serviceProvider.CreateScope();
         var promService = scope.ServiceProvider.GetRequiredService<PrometheusService>();
         var apisixClient = scope.ServiceProvider.GetRequiredService<ApisixClient>();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var notifyService = scope.ServiceProvider.GetRequiredService<NotificationService>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         // Query: Sum of 401/403 errors in the last 1 minute, grouped by client IP
         // Note: 'apisix_http_status' metric must have 'client_ip' label enabled in APISIX prometheus plugin config.
@@ -80,14 +81,6 @@ public class AutoBlockWorker : BackgroundService
                     AddedAt = DateTime.UtcNow
                 };
 
-                // Use the controller or service directly. Service is cleaner but Controller has the full flow.
-                // Let's use ApisixClient + DB context directly here or call a specialized method in SecurityAutomationService.
-                // For simplicity and DRY, let's assume we call BlacklistController's logic logic or similar.
-                
-                // Let's directly call ApisixClient to fetch current list, append, and update.
-                // Better yet: Update DB first.
-                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                
                 if (!dbContext.BlacklistEntries.Any(b => b.IpOrCidr == ip))
                 {
                     dbContext.BlacklistEntries.Add(entry);
@@ -99,6 +92,12 @@ public class AutoBlockWorker : BackgroundService
                     
                     _recentlyBlockedIps[ip] = DateTime.UtcNow;
                     _logger.LogInformation($"[BLOCKED] IP {ip} has been successfully banned.");
+
+                    await notifyService.AlertAsync(
+                        "Active Defense Triggered", 
+                        $"IP `{ip}` has been **BLOCKED** due to high error rate ({errorCount}/min).", 
+                        isCritical: true
+                    );
                 }
             }
         }
