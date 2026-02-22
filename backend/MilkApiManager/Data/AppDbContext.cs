@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<WhitelistEntry> WhitelistEntries { get; set; }
     public DbSet<PiiMaskingRule> PiiMaskingRules { get; set; }
     public DbSet<NotificationChannel> NotificationChannels { get; set; }
+    public DbSet<MockRule> MockRules { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

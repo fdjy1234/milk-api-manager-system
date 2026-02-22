@@ -1,0 +1,74 @@
+@page "/load-testing"
+@using MilkAdminBlazor.Data
+@inject ApisixService ApisixService
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true"><MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Class="mr-2"/> Stress Test Center</MudText>
+    <MudText Typo="Typo.body1" Class="text-muted mb-4">Run real-time performance tests against your API endpoints using k6 engine.</MudText>
+
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4 shadow-sm">
+                <MudText Typo="Typo.h6" Class="mb-4">Test Parameters</MudText>
+                <MudTextField @bind-Value="targetUrl" Label="Target URL" Placeholder="http://apisix:9080/api/..." />
+                <MudSlider @bind-Value="vus" Min="1" Max="100" Color="Color.Primary" Class="mt-4">Virtual Users: @vus</MudSlider>
+                <MudSlider @bind-Value="duration" Min="10" Max="300" Step="10" Color="Color.Info" Class="mt-4">Duration: @duration s</MudSlider>
+                
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" 
+                           StartIcon="@Icons.Material.Filled.PlayArrow" Class="mt-6" 
+                           Disabled="@isRunning" OnClick="RunTest">
+                    @(isRunning ? "Running Test..." : "Start Stress Test")
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-4 h-100 shadow-sm overflow-auto" Style="background: #1e1e1e; color: #d4d4d4; font-family: monospace; min-height: 400px;">
+                <MudText Typo="Typo.h6" Class="mb-2 text-white">Live Execution Console</MudText>
+                <div style="white-space: pre-wrap; font-size: 0.85rem;">
+                    @if (string.IsNullOrEmpty(report))
+                    {
+                        <span class="text-muted">Console waiting for execution...</span>
+                    }
+                    else
+                    {
+                        @report
+                    }
+                </div>
+                @if (isRunning)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private string targetUrl = "http://localhost:9080/";
+    private int vus = 10;
+    private int duration = 30;
+    private bool isRunning;
+    private string report = "";
+
+    private async Task RunTest()
+    {
+        isRunning = true;
+        report = $"Initializing k6 engine...\nPreparing virtual users environment...\nExecuting stress test against {targetUrl}\n\n";
+        StateHasChanged();
+
+        try
+        {
+            var result = await ApisixService.RunLoadTestAsync(targetUrl, vus, duration);
+            report += result;
+        }
+        catch (Exception ex)
+        {
+            report += $"\n[ERROR] {ex.Message}";
+        }
+        finally
+        {
+            isRunning = false;
+        }
+    }
+}

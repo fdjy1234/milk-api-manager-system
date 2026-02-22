@@ -43,6 +43,7 @@ else
 }
 builder.Services.AddHttpClient<AuditLogService>();
 builder.Services.AddHttpClient<PrometheusService>();
+builder.Services.AddSingleton<LoadTestService>();
 builder.Services.AddScoped<IVaultService, VaultService>();
 builder.Services.AddScoped<SecurityAutomationService>();
 

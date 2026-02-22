@@ -443,5 +443,40 @@ namespace MilkAdminBlazor.Data
         {
             await _httpClient.DeleteAsync($"api/ConsumerGroup/{id}");
         }
+
+        // --- Mocking & Load Testing ---
+        public class MockRuleDto
+        {
+            public int Id { get; set; }
+            public string RouteId { get; set; } = "";
+            public int ResponseStatusCode { get; set; } = 200;
+            public string ResponseBody { get; set; } = "{}";
+            public string ContentType { get; set; } = "application/json";
+            public bool IsEnabled { get; set; } = true;
+        }
+
+        public async Task<List<MockRuleDto>> GetMockRulesAsync()
+        {
+            try { return await _httpClient.GetFromJsonAsync<List<MockRuleDto>>("api/Mock") ?? new(); }
+            catch { return new(); }
+        }
+
+        public async Task SaveMockRuleAsync(MockRuleDto rule)
+        {
+            if (rule.Id == 0) await _httpClient.PostAsJsonAsync("api/Mock", rule);
+            else await _httpClient.PutAsJsonAsync($"api/Mock/{rule.Id}", rule);
+        }
+
+        public async Task DeleteMockRuleAsync(int id)
+        {
+            await _httpClient.DeleteAsync($"api/Mock/{id}");
+        }
+
+        public async Task<string> RunLoadTestAsync(string url, int vus, int duration)
+        {
+            var response = await _httpClient.PostAsync($"api/LoadTest/run?url={Uri.EscapeDataString(url)}&vus={vus}&duration={duration}", null);
+            var result = await response.Content.ReadFromJsonAsync<JsonElement>();
+            return result.GetProperty("report").GetString() ?? "No report generated.";
+        }
     }
 }
