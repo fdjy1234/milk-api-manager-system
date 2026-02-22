@@ -44,30 +44,13 @@ jobs:
             sleep 5
           done
 
-      # 3. Step 1: Backend Unit Tests (This part can also run on Zeabur)
-      - name: Run .NET Unit Tests
-        run: dotnet test backend/MilkApiManager.Tests/MilkApiManager.Tests.csproj --logger "console;verbosity=normal"
-
-      # 4. Step 2: Playwright Setup & E2E Tests
-      - name: Install E2E Dependencies
-        working-directory: e2e
-        run: |
-          npm install
-          npx playwright install --with-deps chromium
-
-      - name: Run Playwright E2E Tests
-        working-directory: e2e
-        run: npm test
+      # 3. Execution: Unified Verification (The Source of Truth)
+      - name: Run Full System Verification
+        run: bash scripts/verify-all.sh
         env:
-          BASE_URL: "http://localhost:5000" # 如果 Docker 內部的後端對應到此 Port
+          BASE_URL: "http://localhost:5000"
 
-      # 5. Step 3: Python Smoke Test (API Gateway)
-      - name: Run Python Smoke Test
-        run: |
-          pip install requests
-          python test_complete.py
-
-      # 6. Final Status (Always run to upload artifacts if failed)
+      # 4. Final Status (Always run to upload artifacts if failed)
       - name: Dump Docker Logs on Failure
         if: failure()
         run: docker compose logs
