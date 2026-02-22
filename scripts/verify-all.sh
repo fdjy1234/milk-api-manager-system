@@ -11,8 +11,7 @@ echo "   MILK API MANAGER - FULL SYSTEM VERIFICATION"
 echo "==========================================================="
 
 # 1. Infrastructure Check
-echo -e "
-[Step 1/4] Checking Infrastructure (Docker)..."
+echo -e "\n[Step 1/4] Checking Infrastructure (Docker)..."
 REQUIRED_CONTAINERS=("apisix" "etcd" "prometheus" "grafana")
 MISSING=()
 
@@ -24,14 +23,23 @@ done
 
 if [ ${#MISSING[@]} -gt 0 ]; then
     echo "   ✗ Missing: ${MISSING[*]}"
-    echo "   Please run 'docker-compose up -d' first."
 else
     echo "   ✓ All core infrastructure containers are running."
 fi
 
+# Wait for key services to be READY (Crucial for CI stability)
+echo -e "\n[Wait] Verifying Service Connectivity..."
+for i in {1..30}; do
+    if curl -s http://localhost:9180/apisix/admin/routes -H "X-API-KEY: edd1c9f034335f136f87ad84b625c88b" > /dev/null; then
+        echo "   [PASS] APISIX Gateway is READY."
+        break
+    fi
+    [ $i -eq 30 ] && echo "   [WARN] APISIX wait timed out."
+    sleep 2
+done
+
 # 2. .NET Unit Tests
-echo -e "
-[Step 2/4] Running .NET Unit Tests..."
+echo -e "\n[Step 2/4] Running .NET Unit Tests..."
 if dotnet test backend/MilkApiManager.Tests/MilkApiManager.Tests.csproj --logger "console;verbosity=normal"; then
     DOTNET_STATUS="✅ OK"
     DOTNET_CODE=0
@@ -41,8 +49,7 @@ else
 fi
 
 # 3. Python Smoke Tests
-echo -e "
-[Step 3/4] Running API Smoke Tests..."
+echo -e "\n[Step 3/4] Running API Smoke Tests..."
 if python3 test_complete.py; then
     SMOKE_STATUS="✅ OK"
     SMOKE_CODE=0
@@ -52,9 +59,16 @@ else
 fi
 
 # 4. Playwright E2E Tests
-echo -e "
-[Step 4/4] Running Playwright E2E Tests..."
+echo -e "\n[Step 4/4] Running Playwright E2E Tests..."
 cd e2e
+# Ensure dependencies are present
+if [ ! -d "node_modules" ]; then
+    echo "   [Info] Installing E2E dependencies..."
+    npm install --silent
+    npx playwright install --with-deps chromium > /dev/null 2>&1
+fi
+
+export BASE_URL="http://localhost:5000"
 if npm test; then
     E2E_STATUS="✅ OK"
     E2E_CODE=0
@@ -95,6 +109,5 @@ if [ -n "$GITHUB_STEP_SUMMARY" ]; then
     cat "$REPORT_FILE" >> "$GITHUB_STEP_SUMMARY"
 fi
 
-echo -e "
-Report generated: $REPORT_FILE"
+echo -e "\nReport generated: $REPORT_FILE"
 echo "==========================================================="
