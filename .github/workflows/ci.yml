@@ -68,6 +68,10 @@ jobs:
           python test_complete.py
 
       # 6. Final Status (Always run to upload artifacts if failed)
+      - name: Dump Docker Logs on Failure
+        if: failure()
+        run: docker compose logs
+
       - name: Upload E2E Results on Failure
         if: failure()
         uses: actions/upload-artifact@v4
