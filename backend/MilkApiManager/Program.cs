@@ -56,6 +56,8 @@ builder.Services.AddHttpClient<NotificationService>();
 builder.Services.AddHostedService<AlertMonitoringService>();
 // Register Auto-Blocking Security Worker
 builder.Services.AddHostedService<AutoBlockWorker>();
+// Register Code-First Route Sync
+builder.Services.AddHostedService<ApisixRouteSyncService>();
 
 // AuditContext registered above with AppDbContext logic
 
