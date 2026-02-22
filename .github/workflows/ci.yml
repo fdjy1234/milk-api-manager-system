@@ -33,8 +33,16 @@ jobs:
       - name: Start Services via Docker Compose
         run: |
           docker compose up -d
-          echo "Waiting for services to initialize..."
-          sleep 15
+          echo "Waiting for services to initialize (60s)..."
+          # Wait for APISIX Admin API to be responsive
+          for i in {1..20}; do
+            if curl -s http://localhost:9180/apisix/admin/routes -H "X-API-KEY: edd1c9f034335f136f87ad84b625c88b"; then
+              echo "APISIX is READY!"
+              break
+            fi
+            echo "Waiting for APISIX... ($i/20)"
+            sleep 5
+          done
 
       # 3. Step 1: Backend Unit Tests (This part can also run on Zeabur)
       - name: Run .NET Unit Tests
