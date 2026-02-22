@@ -8,6 +8,12 @@
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Large" Class="mr-2"/> Traffic Intelligence Center</MudText>
         <div class="d-flex align-center">
+            @if (_sla != null)
+            {
+                <MudAlert Severity="@GetSlaSeverity(_sla.Status)" Variant="Variant.Filled" Dense="true" Class="mr-4 py-0 px-3 rounded-pill">
+                    SLA: @Math.Round(_sla.AvailabilityPercentage, 2)%
+                </MudAlert>
+            }
             <MudText Typo="Typo.body2" Class="mr-2">Auto-Refresh (15s)</MudText>
             <MudSwitch @bind-Value="_autoRefresh" Color="Color.Primary" T="bool" />
             <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Inherit" OnClick="RefreshData" Disabled="_loading" />
@@ -100,6 +106,7 @@
     private List<ApiConsumer> _consumers = new();
     private List<ApiRoute> _routes = new();
     private List<AnalyticsResult> _slowRoutes = new();
+    private ApisixService.SlaDto? _sla;
     private Timer? _timer;
 
     private List<ChartSeries> _requestSeries = new();
@@ -135,6 +142,7 @@
         var latencies = await ApisixService.GetAnalyticsLatencyAsync(_selectedConsumer, _selectedRoute, start, end);
         var errors = await ApisixService.GetAnalyticsErrorsAsync(_selectedConsumer, _selectedRoute, start, end);
         _slowRoutes = await ApisixService.GetTopSlowRoutesAsync();
+        _sla = await ApisixService.GetSlaStatsAsync();
 
         _requestSeries = requests.Select(r => new ChartSeries { Name = r.Label, Data = r.Data.Select(d => d.Value).ToArray() }).ToList();
         _latencySeries = latencies.Select(r => new ChartSeries { Name = r.Label, Data = r.Data.Select(d => d.Value).ToArray() }).ToList();
@@ -152,6 +160,14 @@
         if (string.IsNullOrEmpty(value)) return _routes.Select(r => r.Uri);
         return _routes.Where(x => x.Uri.Contains(value, StringComparison.InvariantCultureIgnoreCase)).Select(x => x.Uri);
     }
+
+    private Severity GetSlaSeverity(string status) => status switch
+    {
+        "Gold" => Severity.Success,
+        "Silver" => Severity.Warning,
+        "Critical" => Severity.Error,
+        _ => Severity.Info
+    };
 
     public void Dispose() => _timer?.Dispose();
 }

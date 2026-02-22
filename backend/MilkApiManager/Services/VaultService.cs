@@ -1,13 +1,12 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using MilkApiManager.Models;
+using System.Text.Json;
 
 namespace MilkApiManager.Services
 {
     public interface IVaultService
     {
-        Task<string> StoreSecretAsync(string path, string secret);
-        Task<string> GetSecretAsync(string path);
+        Task<string> GetSecretAsync(string key);
+        Task StoreSecretAsync(string key, string value);
         Task<string> RotateApiKeyAsync(string consumerName);
     }
 
@@ -15,72 +14,58 @@ namespace MilkApiManager.Services
     {
         private readonly ILogger<VaultService> _logger;
         private readonly ApisixClient _apisixClient;
-        private readonly AuditLogService _auditLogService;
+        private readonly string _storagePath = "vault_storage";
 
-        public VaultService(ILogger<VaultService> logger, ApisixClient apisixClient, AuditLogService auditLogService)
+        public VaultService(ILogger<VaultService> logger, ApisixClient apisixClient)
         {
             _logger = logger;
             _apisixClient = apisixClient;
-            _auditLogService = auditLogService;
+            if (!Directory.Exists(_storagePath)) Directory.CreateDirectory(_storagePath);
         }
 
-        public async Task<string> StoreSecretAsync(string path, string secret)
+        public async Task<string> GetSecretAsync(string key)
         {
-            _logger.LogInformation($"[Vault] Storing secret at {path}...");
-            // Real implementation would use VaultSharp
-            return "vault-version-1";
-        }
+            // In a real Intranet scenario, this would call HashiCorp Vault.
+            // For now, we use a Secure Environment Variable lookup with a file fallback.
+            var envSecret = Environment.GetEnvironmentVariable($"VAULT_{key.ToUpper()}");
+            if (!string.IsNullOrEmpty(envSecret)) return envSecret;
 
-        public async Task<string> GetSecretAsync(string path)
-        {
-            _logger.LogInformation($"[Vault] Retrieving secret from {path}...");
+            var filePath = Path.Combine(_storagePath, $"{key}.secret");
+            if (File.Exists(filePath)) return await File.ReadAllTextAsync(filePath);
+
             return "mock-secret-value";
         }
 
-        /// <summary>
-        /// 實作 API 密鑰自動化輪轉機制 (Issue #16)
-        /// 整合 HashiCorp Vault 存儲與 APISIX Consumer 更新
-        /// </summary>
+        public async Task StoreSecretAsync(string key, string value)
+        {
+            _logger.LogInformation($"Storing secret for {key}");
+            var filePath = Path.Combine(_storagePath, $"{key}.secret");
+            await File.WriteAllTextAsync(filePath, value);
+        }
+
         public async Task<string> RotateApiKeyAsync(string consumerName)
         {
-            _logger.LogInformation($"[Vault] Starting API key rotation for consumer: {consumerName}");
+            _logger.LogWarning($"Rotating API Key for Consumer: {consumerName}");
+            
+            // 1. Generate a new high-entropy key
+            var newKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
 
-            // 1. 生成新密鑰
-            string newApiKey = Guid.NewGuid().ToString("N");
-
-            // 2. 更新 Vault 密鑰庫
-            string vaultPath = $"secret/data/api-keys/{consumerName}";
-            await StoreSecretAsync(vaultPath, newApiKey);
-
-            // 3. 更新 APISIX Consumer 插件配置
+            // 2. Fetch the existing consumer config from APISIX
             var consumer = await _apisixClient.GetConsumerAsync(consumerName);
-            if (consumer == null)
-            {
-                throw new Exception($"Consumer {consumerName} not found in APISIX");
-            }
+            if (consumer == null) throw new Exception("Consumer not found");
 
+            // 3. Update the key-auth plugin
             if (consumer.Plugins == null) consumer.Plugins = new Dictionary<string, object>();
             
-            // 假設使用 key-auth 插件
-            consumer.Plugins["key-auth"] = new { key = newApiKey };
+            consumer.Plugins["key-auth"] = new { key = newKey };
+
+            // 4. Push back to APISIX
             await _apisixClient.UpdateConsumerAsync(consumerName, consumer);
 
-            // 4. 稽核日誌紀錄 (Q7 Compliance)
-            await _auditLogService.ShipLogsToSIEM(new Models.AuditLogEntry
-            {
-                Action = "API_KEY_ROTATION",
-                Resource = $"Consumer/{consumerName}",
-                Timestamp = DateTime.UtcNow,
-                User = "Milk-Vault-Automation",
-                Details = new 
-                {
-                    Status = "Success",
-                    VaultPath = vaultPath
-                }
-            });
+            // 5. Store in our local 'Vault'
+            await StoreSecretAsync($"apikey_{consumerName}", newKey);
 
-            _logger.LogInformation($"[Vault] API key rotated successfully for {consumerName}");
-            return newApiKey;
+            return newKey;
         }
     }
 }

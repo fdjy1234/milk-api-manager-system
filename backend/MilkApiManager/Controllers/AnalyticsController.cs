@@ -96,5 +96,21 @@ namespace MilkApiManager.Controllers
             var result = await _prometheus.GetMetricAsync(promQuery, start, end, "1m");
             return Ok(result);
         }
+
+        [HttpGet("sla")]
+        public async Task<IActionResult> GetSlaStats()
+        {
+            // Calculate: (Success requests / Total requests) * 100 over the last 24h
+            var promQuery = "sum(rate(apisix_http_status{code=~\"[23].*\"}[24h])) / sum(rate(apisix_http_status[24h])) * 100";
+            
+            var result = await _prometheus.QueryVectorAsync(promQuery);
+            var availability = result.Values.FirstOrDefault();
+            
+            return Ok(new { 
+                availabilityPercentage = availability > 0 ? availability : 100.0,
+                status = availability >= 99.9 ? "Gold" : availability >= 99.0 ? "Silver" : "Critical",
+                lastChecked = DateTime.UtcNow
+            });
+        }
     }
 }

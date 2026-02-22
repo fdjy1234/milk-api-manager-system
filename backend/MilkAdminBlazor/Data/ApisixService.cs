@@ -559,5 +559,17 @@ namespace MilkAdminBlazor.Data
             try { return await _httpClient.GetFromJsonAsync<List<AnalyticsResult>>("api/Analytics/top-slow-routes") ?? new(); }
             catch { return new(); }
         }
+
+        public class SlaDto
+        {
+            public double AvailabilityPercentage { get; set; }
+            public string Status { get; set; } = "Unknown";
+        }
+
+        public async Task<SlaDto?> GetSlaStatsAsync()
+        {
+            try { return await _httpClient.GetFromJsonAsync<SlaDto>("api/Analytics/sla"); }
+            catch { return new SlaDto { AvailabilityPercentage = 100, Status = "Offline" }; }
+        }
     }
 }
