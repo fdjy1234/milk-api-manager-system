@@ -1,0 +1,123 @@
+@page "/dev-portal"
+@using MilkAdminBlazor.Data
+@inject ApisixService ApisixService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true"><MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Class="mr-2"/> Developer Self-Service Portal</MudText>
+    <MudText Typo="Typo.body1" Class="text-muted mb-6">Internal teams can browse APIs and request access keys with specific performance tiers.</MudText>
+
+    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" ApplyEffectsToContainer="true">
+        <!-- Tab 1: Submit New Request -->
+        <MudTabPanel Text="Request Access" Icon="@Icons.Material.Filled.AddBox">
+            <MudPaper Class="pa-6 mt-4" Elevation="0">
+                <MudText Typo="Typo.h6" Class="mb-4">New Access Application</MudText>
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="newRequest.ProjectName" Label="Project Name" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="newRequest.ApplicantEmail" Label="Your Email" Variant="Variant.Outlined" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="newRequest.RequestedTier" Label="Desired Performance Tier" Variant="Variant.Outlined">
+                            <MudSelectItem Value="@("Free")">Free (10 req/min)</MudSelectItem>
+                            <MudSelectItem Value="@("Silver")">Silver (100 req/min)</MudSelectItem>
+                            <MudSelectItem Value="@("Gold")">Gold (1000 req/min)</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="newRequest.Purpose" Label="Purpose of Access" Variant="Variant.Outlined" Lines="3" Placeholder="Describe how your project will use this API..." />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitRequest" StartIcon="@Icons.Material.Filled.Send">Submit for Approval</MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudTabPanel>
+
+        <!-- Tab 2: Track Status -->
+        <MudTabPanel Text="My Requests" Icon="@Icons.Material.Filled.History">
+            <MudTable Items="@requests" Hover="true" Class="mt-4" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Tier</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Comment</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</MudTd>
+                    <MudTd><b>@context.ProjectName</b></MudTd>
+                    <MudTd>@context.RequestedTier</MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">@context.Status</MudChip>
+                    </MudTd>
+                    <MudTd><small>@context.AdminComment</small></MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+
+        <!-- Tab 3: Admin Review (Conditional - ideally scoped to roles) -->
+        <MudTabPanel Text="Admin Approval" Icon="@Icons.Material.Filled.RateReview">
+            <MudTable Items="@requests.Where(r => r.Status == "Pending")" Hover="true" Class="mt-4" Elevation="0">
+                <ToolBarContent><MudText Typo="Typo.h6">Pending Approvals</MudText></ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Project</MudTh>
+                    <MudTh>Tier</MudTh>
+                    <MudTh>Purpose</MudTh>
+                    <MudTh Style="text-align:right">Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.ProjectName (@context.ApplicantEmail)</MudTd>
+                    <MudTd><MudChip T="string" Color="Color.Info" Size="Size.Small">@context.RequestedTier</MudChip></MudTd>
+                    <MudTd>@context.Purpose</MudTd>
+                    <MudTd Style="text-align:right">
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => Approve(context.Id))" Class="mr-2">Approve</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(() => Reject(context.Id))">Reject</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    private List<ApisixService.AccessRequestDto> requests = new();
+    private ApisixService.AccessRequestDto newRequest = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
+
+    private async Task Load() => requests = await ApisixService.GetAccessRequestsAsync();
+
+    private async Task SubmitRequest()
+    {
+        await ApisixService.SubmitAccessRequestAsync(newRequest);
+        Snackbar.Add("Request submitted successfully!", Severity.Success);
+        newRequest = new();
+        await Load();
+    }
+
+    private async Task Approve(int id)
+    {
+        await ApisixService.ApproveRequestAsync(id, "Approved by admin.");
+        Snackbar.Add("Access granted and Consumer provisioned.", Severity.Success);
+        await Load();
+    }
+
+    private async Task Reject(int id)
+    {
+        await ApisixService.RejectRequestAsync(id, "Does not meet internal policy.");
+        Snackbar.Add("Request rejected.", Severity.Warning);
+        await Load();
+    }
+
+    private Color GetStatusColor(string status) => status switch {
+        "Approved" => Color.Success,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+}

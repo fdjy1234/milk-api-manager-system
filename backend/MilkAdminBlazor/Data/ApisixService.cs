@@ -478,5 +478,39 @@ namespace MilkAdminBlazor.Data
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();
             return result.GetProperty("report").GetString() ?? "No report generated.";
         }
+
+        // --- Developer Portal / Access Requests ---
+        public class AccessRequestDto
+        {
+            public int Id { get; set; }
+            public string ProjectName { get; set; } = "";
+            public string ApplicantEmail { get; set; } = "";
+            public string RequestedTier { get; set; } = "Free";
+            public string Purpose { get; set; } = "";
+            public string Status { get; set; } = "Pending";
+            public string? AdminComment { get; set; }
+            public DateTime CreatedAt { get; set; }
+        }
+
+        public async Task<List<AccessRequestDto>> GetAccessRequestsAsync()
+        {
+            try { return await _httpClient.GetFromJsonAsync<List<AccessRequestDto>>("api/AccessRequest") ?? new(); }
+            catch { return new(); }
+        }
+
+        public async Task SubmitAccessRequestAsync(AccessRequestDto request)
+        {
+            await _httpClient.PostAsJsonAsync("api/AccessRequest/submit", request);
+        }
+
+        public async Task ApproveRequestAsync(int id, string comment)
+        {
+            await _httpClient.PostAsync($"api/AccessRequest/{id}/approve?comment={Uri.EscapeDataString(comment)}", null);
+        }
+
+        public async Task RejectRequestAsync(int id, string reason)
+        {
+            await _httpClient.PostAsync($"api/AccessRequest/{id}/reject?reason={Uri.EscapeDataString(reason)}", null);
+        }
     }
 }
