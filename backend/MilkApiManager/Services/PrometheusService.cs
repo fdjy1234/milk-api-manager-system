@@ -73,5 +73,49 @@ namespace MilkApiManager.Services
                 return new List<AnalyticsResult>();
             }
         }
+
+        public virtual async Task<Dictionary<string, double>> QueryVectorAsync(string query)
+        {
+            try
+            {
+                var url = $"{_prometheusUrl}/api/v1/query?query={Uri.EscapeDataString(query)}";
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode) return new Dictionary<string, double>();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var doc = JsonDocument.Parse(content);
+                var results = new Dictionary<string, double>();
+
+                if (doc.RootElement.TryGetProperty("data", out var data) && 
+                    data.TryGetProperty("result", out var resultList))
+                {
+                    foreach (var item in resultList.EnumerateArray())
+                    {
+                        string key = "unknown";
+                        if (item.TryGetProperty("metric", out var metric))
+                        {
+                            // Try to grab IP or relevant label
+                            if (metric.TryGetProperty("client_ip", out var ip)) key = ip.GetString() ?? "unknown";
+                            else if (metric.TryGetProperty("remote_addr", out var remote)) key = remote.GetString() ?? "unknown";
+                        }
+
+                        if (item.TryGetProperty("value", out var valueArr))
+                        {
+                            var valStr = valueArr[1].GetString();
+                            if (double.TryParse(valStr, out var val))
+                            {
+                                results[key] = val;
+                            }
+                        }
+                    }
+                }
+                return results;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing vector query: {Query}", query);
+                return new Dictionary<string, double>();
+            }
+        }
     }
 }

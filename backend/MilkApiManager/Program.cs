@@ -54,6 +54,8 @@ builder.Services.AddHttpClient<NotificationService>();
 
 // Register AlertMonitoringService as Background Service
 builder.Services.AddHostedService<AlertMonitoringService>();
+// Register Auto-Blocking Security Worker
+builder.Services.AddHostedService<AutoBlockWorker>();
 
 // AuditContext registered above with AppDbContext logic
 
