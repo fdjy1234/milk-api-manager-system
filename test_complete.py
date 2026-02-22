@@ -7,7 +7,7 @@ Complete Backend API Test Suite
 import requests
 import json
 
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:5001"
 APISIX_URL = "http://localhost:9180/apisix/admin"
 APISIX_KEY = "edd1c9f034335f136f87ad84b625c88b"
 
