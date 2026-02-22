@@ -36,6 +36,13 @@ Thumbs.db
 # Local test artifacts
 TEST_REPORT.md
 BACKEND_TEST_RESULTS.md
+E2E_TEST_REPORT.md
+**/TestResults/
+e2e/test-results/
+e2e/test-report/
+e2e/screenshots/
+*.trx
+*.log
 
 # Docker
 docker-compose.override.yml
