@@ -1,5 +1,6 @@
 using MilkApiManager.Services;
 using MilkApiManager.Data;
+using MilkApiManager.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,25 +77,37 @@ using (var scope = app.Services.CreateScope())
     if (!isTestMode)
     {
         var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var apisix = scope.ServiceProvider.GetRequiredService<ApisixClient>();
-    var persist = config.GetValue<bool>("Blacklist:PersistToDatabase");
-    if (persist)
-    {
-        var entries = db.BlacklistEntries.Select(e => e.IpOrCidr).ToList();
-        if (entries.Any())
+        var apisix = scope.ServiceProvider.GetRequiredService<ApisixClient>();
+        var persist = config.GetValue<bool>("Blacklist:PersistToDatabase");
+        
+        // 1. Sync Blacklist
+        if (persist)
         {
-            // fire-and-forget sync
-            try
+            var entries = db.BlacklistEntries.Select(e => e.IpOrCidr).ToList();
+            if (entries.Any())
             {
-                apisix.UpdateBlacklistAsync(entries).GetAwaiter().GetResult();
+                try { apisix.UpdateBlacklistAsync(entries).GetAwaiter().GetResult(); }
+                catch { /* Log error */ }
             }
-            catch (Exception ex)
+        }
+
+        // 2. Register this service in API Catalog
+        try 
+        {
+            var catalog = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            if (!catalog.ApiServices.Any(s => s.Name == "Milk Manager Core"))
             {
-                var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-                logger.LogError(ex, "Failed to sync blacklist entries to APISIX on startup");
+                catalog.ApiServices.Add(new ApiServiceMetadata {
+                    Name = "Milk Manager Core",
+                    Description = "Central API Management Control Plane",
+                    BasePath = "/api",
+                    OpenApiUrl = "http://localhost:5001/swagger/v1/swagger.json",
+                    OwnerTeam = "Platform Team"
+                });
+                catalog.SaveChanges();
             }
-            }
-    }
+        }
+        catch { /* Log error */ }
     }
 }
 

@@ -512,5 +512,22 @@ namespace MilkAdminBlazor.Data
         {
             await _httpClient.PostAsync($"api/AccessRequest/{id}/reject?reason={Uri.EscapeDataString(reason)}", null);
         }
+
+        // --- API Catalog ---
+        public class ApiServiceDto
+        {
+            public int Id { get; set; }
+            public string Name { get; set; } = "";
+            public string Description { get; set; } = "";
+            public string BasePath { get; set; } = "";
+            public string OpenApiUrl { get; set; } = "";
+            public string OwnerTeam { get; set; } = "";
+        }
+
+        public async Task<List<ApiServiceDto>> GetApiCatalogAsync()
+        {
+            try { return await _httpClient.GetFromJsonAsync<List<ApiServiceDto>>("api/ApiCatalog") ?? new(); }
+            catch { return new(); }
+        }
     }
 }

@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<NotificationChannel> NotificationChannels { get; set; }
     public DbSet<MockRule> MockRules { get; set; }
     public DbSet<AccessRequest> AccessRequests { get; set; }
+    public DbSet<ApiServiceMetadata> ApiServices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

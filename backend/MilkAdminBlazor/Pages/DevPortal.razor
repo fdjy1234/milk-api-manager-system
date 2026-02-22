@@ -3,14 +3,55 @@
 @inject ApisixService ApisixService
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudText Typo="Typo.h4" GutterBottom="true"><MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Class="mr-2"/> Developer Self-Service Portal</MudText>
-    <MudText Typo="Typo.body1" Class="text-muted mb-6">Internal teams can browse APIs and request access keys with specific performance tiers.</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true"><MudIcon Icon="@Icons.Material.Filled.Terminal" Size="Size.Large" Class="mr-2"/> Developer Hub</MudText>
+    
+    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" ApplyEffectsToContainer="true" PanelClass="pa-0">
+        
+        <!-- Tab 1: API Explorer (Embedded Docs) -->
+        <MudTabPanel Text="API Explorer" Icon="@Icons.Material.Filled.TravelExplore">
+            <MudGrid Spacing="0" Style="height: calc(100vh - 250px); min-height: 600px;">
+                <!-- Sidebar: Service List -->
+                <MudItem xs="12" md="3" Class="border-end bg-light overflow-auto h-100">
+                    <MudList T="string" Clickable="true" @bind-SelectedValue="selectedServiceName" Color="Color.Primary">
+                        <MudListSubheader>Available Services</MudListSubheader>
+                        @foreach (var service in catalog)
+                        {
+                            <MudListItem Text="@service.Name" Value="@service.Name" Icon="@Icons.Material.Filled.Api" OnClick="() => SelectService(service)" />
+                        }
+                    </MudList>
+                </MudItem>
 
-    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary" ApplyEffectsToContainer="true">
-        <!-- Tab 1: Submit New Request -->
+                <!-- Content: Documentation -->
+                <MudItem xs="12" md="9" Class="h-100">
+                    @if (selectedService != null)
+                    {
+                        <div class="d-flex flex-column h-100">
+                            <div class="pa-4 bg-white border-bottom shadow-sm">
+                                <MudText Typo="Typo.h5">@selectedService.Name</MudText>
+                                <MudText Typo="Typo.body2" Class="text-muted">Base Path: <code>@selectedService.BasePath</code> | Owner: @selectedService.OwnerTeam</MudText>
+                            </div>
+                            <!-- Embed Swagger UI via Iframe pointing to the service's own swagger page -->
+                            <!-- Note: In internal env, we use the OpenApiUrl or proxy it -->
+                            <iframe src="@GetSwaggerEmbedUrl(selectedService.OpenApiUrl)" 
+                                    style="width: 100%; height: 100%; border: none;" 
+                                    frameborder="0"></iframe>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column align-center justify-center h-100 text-muted">
+                            <MudIcon Icon="@Icons.Material.Filled.AutoStories" Size="Size.Large" Class="mb-4" />
+                            <MudText>Select a service from the left to browse documentation.</MudText>
+                        </div>
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+
+        <!-- Tab 2: Request Access -->
         <MudTabPanel Text="Request Access" Icon="@Icons.Material.Filled.AddBox">
-            <MudPaper Class="pa-6 mt-4" Elevation="0">
+            <MudPaper Class="pa-6 mt-4 mx-4" Elevation="0">
                 <MudText Typo="Typo.h6" Class="mb-4">New Access Application</MudText>
                 <MudGrid>
                     <MudItem xs="12" md="6">
@@ -27,54 +68,46 @@
                         </MudSelect>
                     </MudItem>
                     <MudItem xs="12">
-                        <MudTextField @bind-Value="newRequest.Purpose" Label="Purpose of Access" Variant="Variant.Outlined" Lines="3" Placeholder="Describe how your project will use this API..." />
+                        <MudTextField @bind-Value="newRequest.Purpose" Label="Purpose of Access" Variant="Variant.Outlined" Lines="3" />
                     </MudItem>
                     <MudItem xs="12">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitRequest" StartIcon="@Icons.Material.Filled.Send">Submit for Approval</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitRequest" StartIcon="@Icons.Material.Filled.Send">Submit Request</MudButton>
                     </MudItem>
                 </MudGrid>
             </MudPaper>
         </MudTabPanel>
 
-        <!-- Tab 2: Track Status -->
+        <!-- Tab 3: My Status -->
         <MudTabPanel Text="My Requests" Icon="@Icons.Material.Filled.History">
-            <MudTable Items="@requests" Hover="true" Class="mt-4" Elevation="0">
+            <MudTable Items="@requests" Hover="true" Class="mt-4 mx-4" Elevation="0">
                 <HeaderContent>
                     <MudTh>Date</MudTh>
                     <MudTh>Project</MudTh>
                     <MudTh>Tier</MudTh>
                     <MudTh>Status</MudTh>
-                    <MudTh>Comment</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>@context.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</MudTd>
-                    <MudTd><b>@context.ProjectName</b></MudTd>
+                    <MudTd>@context.CreatedAt.ToLocalTime().ToString("g")</MudTd>
+                    <MudTd>@context.ProjectName</MudTd>
                     <MudTd>@context.RequestedTier</MudTd>
-                    <MudTd>
-                        <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">@context.Status</MudChip>
-                    </MudTd>
-                    <MudTd><small>@context.AdminComment</small></MudTd>
+                    <MudTd><MudChip T="string" Color="@GetStatusColor(context.Status)">@context.Status</MudChip></MudTd>
                 </RowTemplate>
             </MudTable>
         </MudTabPanel>
 
-        <!-- Tab 3: Admin Review (Conditional - ideally scoped to roles) -->
-        <MudTabPanel Text="Admin Approval" Icon="@Icons.Material.Filled.RateReview">
-            <MudTable Items="@requests.Where(r => r.Status == "Pending")" Hover="true" Class="mt-4" Elevation="0">
-                <ToolBarContent><MudText Typo="Typo.h6">Pending Approvals</MudText></ToolBarContent>
+        <!-- Tab 4: Admin Review -->
+        <MudTabPanel Text="Admin Panel" Icon="@Icons.Material.Filled.Security">
+            <MudTable Items="@requests.Where(r => r.Status == "Pending")" Hover="true" Class="mt-4 mx-4" Elevation="0">
                 <HeaderContent>
                     <MudTh>Project</MudTh>
-                    <MudTh>Tier</MudTh>
                     <MudTh>Purpose</MudTh>
                     <MudTh Style="text-align:right">Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>@context.ProjectName (@context.ApplicantEmail)</MudTd>
-                    <MudTd><MudChip T="string" Color="Color.Info" Size="Size.Small">@context.RequestedTier</MudChip></MudTd>
+                    <MudTd>@context.ProjectName</MudTd>
                     <MudTd>@context.Purpose</MudTd>
                     <MudTd Style="text-align:right">
-                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => Approve(context.Id))" Class="mr-2">Approve</MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(() => Reject(context.Id))">Reject</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="@(() => Approve(context.Id))">Approve</MudButton>
                     </MudTd>
                 </RowTemplate>
             </MudTable>
@@ -83,41 +116,44 @@
 </MudContainer>
 
 @code {
+    private List<ApisixService.ApiServiceDto> catalog = new();
     private List<ApisixService.AccessRequestDto> requests = new();
     private ApisixService.AccessRequestDto newRequest = new();
+    private string? selectedServiceName;
+    private ApisixService.ApiServiceDto? selectedService;
 
     protected override async Task OnInitializedAsync()
     {
         await Load();
     }
 
-    private async Task Load() => requests = await ApisixService.GetAccessRequestsAsync();
-
-    private async Task SubmitRequest()
+    private async Task Load()
     {
-        await ApisixService.SubmitAccessRequestAsync(newRequest);
-        Snackbar.Add("Request submitted successfully!", Severity.Success);
-        newRequest = new();
-        await Load();
+        catalog = await ApisixService.GetApiCatalogAsync();
+        requests = await ApisixService.GetAccessRequestsAsync();
+        
+        // Mock data if catalog is empty for demonstration
+        if (!catalog.Any())
+        {
+            catalog.Add(new ApisixService.ApiServiceDto { Name = "Milk Manager API", Description = "Core System API", BasePath = "/api", OpenApiUrl = "http://localhost:5001/swagger/v1/swagger.json", OwnerTeam = "System Admin" });
+            catalog.Add(new ApisixService.ApiServiceDto { Name = "Portal Static Service", Description = "Internal Portal Assets", BasePath = "/portal", OpenApiUrl = "/openapi.yaml", OwnerTeam = "Frontend Team" });
+        }
     }
 
-    private async Task Approve(int id)
+    private void SelectService(ApisixService.ApiServiceDto service)
     {
-        await ApisixService.ApproveRequestAsync(id, "Approved by admin.");
-        Snackbar.Add("Access granted and Consumer provisioned.", Severity.Success);
-        await Load();
+        selectedService = service;
     }
 
-    private async Task Reject(int id)
+    private string GetSwaggerEmbedUrl(string rawUrl)
     {
-        await ApisixService.RejectRequestAsync(id, "Does not meet internal policy.");
-        Snackbar.Add("Request rejected.", Severity.Warning);
-        await Load();
+        // If it's a direct json link, we can point to a Swagger UI viewer.
+        // For simplicity, we assume the backends provide a UI page.
+        if (rawUrl.Contains("swagger.json")) return rawUrl.Replace("swagger.json", "index.html");
+        return rawUrl;
     }
 
-    private Color GetStatusColor(string status) => status switch {
-        "Approved" => Color.Success,
-        "Rejected" => Color.Error,
-        _ => Color.Default
-    };
+    private async Task SubmitRequest() { await ApisixService.SubmitAccessRequestAsync(newRequest); Snackbar.Add("Submitted", Severity.Info); await Load(); }
+    private async Task Approve(int id) { await ApisixService.ApproveRequestAsync(id, "OK"); await Load(); }
+    private Color GetStatusColor(string status) => status == "Approved" ? Color.Success : Color.Default;
 }
