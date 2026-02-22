@@ -9,10 +9,22 @@ public class AppDbContext : DbContext
     public DbSet<AuditLogEntry> AuditLogs { get; set; }
     public DbSet<BlacklistEntry> BlacklistEntries { get; set; }
     public DbSet<WhitelistEntry> WhitelistEntries { get; set; }
+    public DbSet<PiiMaskingRule> PiiMaskingRules { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        modelBuilder.Entity<PiiMaskingRule>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RouteId).IsRequired();
+            entity.Property(e => e.FieldPath).IsRequired();
+            entity.Property(e => e.UpdatedAt).HasConversion(
+                v => v.ToUniversalTime(),
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+        });
+
         modelBuilder.Entity<AuditLogEntry>(entity =>
         {
             entity.HasKey(e => e.Id);

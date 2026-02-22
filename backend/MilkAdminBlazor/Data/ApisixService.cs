@@ -324,5 +324,60 @@ namespace MilkAdminBlazor.Data
         {
             await _httpClient.DeleteAsync($"api/whitelist/route/{routeId}/{Uri.EscapeDataString(ip)}");
         }
+
+        // --- PII Masking Management ---
+        public class PiiMaskingRuleDto
+        {
+            [JsonPropertyName("id")]
+            public int Id { get; set; }
+
+            [JsonPropertyName("routeId")]
+            public string RouteId { get; set; } = string.Empty;
+
+            [JsonPropertyName("fieldPath")]
+            public string FieldPath { get; set; } = string.Empty;
+
+            [JsonPropertyName("regexPattern")]
+            public string RegexPattern { get; set; } = ".*";
+
+            [JsonPropertyName("replacePattern")]
+            public string ReplacePattern { get; set; } = "***";
+
+            [JsonPropertyName("isActive")]
+            public bool IsActive { get; set; } = true;
+
+            [JsonPropertyName("updatedAt")]
+            public DateTime UpdatedAt { get; set; }
+
+            [JsonPropertyName("description")]
+            public string Description { get; set; } = string.Empty;
+        }
+
+        public async Task<List<PiiMaskingRuleDto>> GetPiiRulesAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetFromJsonAsync<List<PiiMaskingRuleDto>>("api/PiiMasking");
+                return response ?? new List<PiiMaskingRuleDto>();
+            }
+            catch { return new List<PiiMaskingRuleDto>(); }
+        }
+
+        public async Task SavePiiRuleAsync(PiiMaskingRuleDto rule)
+        {
+            if (rule.Id == 0)
+            {
+                await _httpClient.PostAsJsonAsync("api/PiiMasking", rule);
+            }
+            else
+            {
+                await _httpClient.PutAsJsonAsync($"api/PiiMasking/{rule.Id}", rule);
+            }
+        }
+
+        public async Task DeletePiiRuleAsync(int id)
+        {
+            await _httpClient.DeleteAsync($"api/PiiMasking/{id}");
+        }
     }
 }

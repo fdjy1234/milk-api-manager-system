@@ -1,0 +1,179 @@
+@page "/pii-management"
+@using MilkAdminBlazor.Data
+@inject ApisixService ApisixService
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="display-6"><i class="bi bi-shield-lock-fill text-primary"></i> PII Privacy Shield Center</h2>
+            <p class="text-muted">Manage dynamic data masking rules for sensitive PII fields (Email, Phone, SSN, etc.).</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="AddNewRule">
+                <i class="bi bi-plus-circle"></i> Add New Rule
+            </button>
+        </div>
+    </div>
+
+    @if (rules == null)
+    {
+        <div class="d-flex justify-content-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="px-4">Status</th>
+                            <th>Route ID</th>
+                            <th>Field Path</th>
+                            <th>Regex Pattern</th>
+                            <th>Replacement</th>
+                            <th>Last Updated</th>
+                            <th class="text-end px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rule in rules)
+                        {
+                            <tr>
+                                <td class="px-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" checked="@rule.IsActive" @onchange="@(e => ToggleRule(rule))">
+                                        <span class="badge @(rule.IsActive ? "bg-success-soft text-success" : "bg-secondary-soft text-secondary")">
+                                            @(rule.IsActive ? "Active" : "Disabled")
+                                        </span>
+                                    </div>
+                                </td>
+                                <td><code class="text-primary fw-bold">@rule.RouteId</code></td>
+                                <td><code>@rule.FieldPath</code></td>
+                                <td><small class="text-muted font-monospace">@rule.RegexPattern</small></td>
+                                <td><span class="badge bg-light text-dark border">@rule.ReplacePattern</span></td>
+                                <td>@rule.UpdatedAt.ToLocalTime().ToString("g")</td>
+                                <td class="text-end px-4">
+                                    <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => EditRule(rule)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRule(rule.Id)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">@(editingRule.Id == 0 ? "Add Protection Rule" : "Edit Protection Rule")</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showModal = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Target Route ID</label>
+                            <input type="text" class="form-control" @bind="editingRule.RouteId" placeholder="e.g., 1, 2, my-route-id">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Field Path (JSON Path)</label>
+                            <input type="text" class="form-control" @bind="editingRule.FieldPath" placeholder="e.g., user.email, credit_card.number">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Regex Pattern</label>
+                            <input type="text" class="form-control font-monospace" @bind="editingRule.RegexPattern" placeholder="e.g., (.+@@)(.+) or (\d{4})">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Replacement Value</label>
+                            <input type="text" class="form-control font-monospace" @bind="editingRule.ReplacePattern" placeholder="e.g., ***@@$2 or $1****">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea class="form-control" @bind="editingRule.Description" rows="2" placeholder="Describe why this field needs protection..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="() => showModal = false">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4" @onclick="SaveRule">Save Protection Rule</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-secondary-soft { background-color: rgba(108, 117, 125, 0.1); }
+    code { font-size: 0.9em; }
+</style>
+
+@code {
+    private List<ApisixService.PiiMaskingRuleDto> rules;
+    private bool showModal = false;
+    private ApisixService.PiiMaskingRuleDto editingRule = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRules();
+    }
+
+    private async Task LoadRules()
+    {
+        rules = await ApisixService.GetPiiRulesAsync();
+    }
+
+    private void AddNewRule()
+    {
+        editingRule = new ApisixService.PiiMaskingRuleDto { IsActive = true, RegexPattern = ".*", ReplacePattern = "***" };
+        showModal = true;
+    }
+
+    private void EditRule(ApisixService.PiiMaskingRuleDto rule)
+    {
+        editingRule = new ApisixService.PiiMaskingRuleDto
+        {
+            Id = rule.Id,
+            RouteId = rule.RouteId,
+            FieldPath = rule.FieldPath,
+            RegexPattern = rule.RegexPattern,
+            ReplacePattern = rule.ReplacePattern,
+            IsActive = rule.IsActive,
+            Description = rule.Description
+        };
+        showModal = true;
+    }
+
+    private async Task SaveRule()
+    {
+        await ApisixService.SavePiiRuleAsync(editingRule);
+        showModal = false;
+        await LoadRules();
+    }
+
+    private async Task DeleteRule(int id)
+    {
+        await ApisixService.DeletePiiRuleAsync(id);
+        await LoadRules();
+    }
+
+    private async Task ToggleRule(ApisixService.PiiMaskingRuleDto rule)
+    {
+        rule.IsActive = !rule.IsActive;
+        await ApisixService.SavePiiRuleAsync(rule);
+        await LoadRules();
+    }
+}
