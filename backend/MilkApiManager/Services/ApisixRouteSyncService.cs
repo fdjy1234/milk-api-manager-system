@@ -75,10 +75,10 @@ public class ApisixRouteSyncService : IHostedService
                 var routeConfig = new Models.Apisix.Route
                 {
                     Name = routeId,
+                    Uri = fullUri,
                     Uris = new List<string> { fullUri },
                     Methods = methodsList,
-                    UpstreamId = "1", // Assuming a default upstream exists or we use ServiceId
-                    Status = 1
+                    ServiceId = "insure-tech-backend" // Map to default service
                 };
 
                 _logger.LogInformation($"Syncing Route: {routeId} -> {fullUri}");

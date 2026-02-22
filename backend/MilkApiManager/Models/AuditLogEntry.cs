@@ -12,6 +12,7 @@ public class AuditLogEntry
     public string User { get; set; } = "System";
     public string Action { get; set; } = string.Empty; // Create, Update, Delete, Read
     public string Resource { get; set; } = string.Empty; // e.g. "Route", "Consumer"
+    public int StatusCode { get; set; } = 200; // HTTP Status or custom status code
 
     [NotMapped]
     public object? Details { get; set; } // Flexible object for runtime usage

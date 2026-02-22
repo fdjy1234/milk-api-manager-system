@@ -21,4 +21,19 @@ public class AuditLogsController : ControllerBase
         var logs = await _auditLogService.GetLogsAsync(limit);
         return Ok(logs);
     }
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<Dictionary<string, int>>> GetStats()
+    {
+        var stats = await _auditLogService.GetAuditStatsAsync();
+        return Ok(stats);
+    }
+
+    [HttpGet("export")]
+    public async Task<IActionResult> Export()
+    {
+        var csv = await _auditLogService.GetLogsCsvAsync(1000);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        return File(bytes, "text/csv", $"audit_logs_{DateTime.UtcNow:yyyyMMdd}.csv");
+    }
 }

@@ -86,15 +86,15 @@ public class AutoBlockWorker : BackgroundService
                 
                 // Let's directly call ApisixClient to fetch current list, append, and update.
                 // Better yet: Update DB first.
-                var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 
-                if (!db.BlacklistEntries.Any(b => b.IpOrCidr == ip))
+                if (!dbContext.BlacklistEntries.Any(b => b.IpOrCidr == ip))
                 {
-                    db.BlacklistEntries.Add(entry);
-                    await db.SaveChangesAsync();
+                    dbContext.BlacklistEntries.Add(entry);
+                    await dbContext.SaveChangesAsync();
                     
                     // Sync to APISIX
-                    var currentList = await db.BlacklistEntries.Select(e => e.IpOrCidr).ToListAsync();
+                    var currentList = await dbContext.BlacklistEntries.Select(e => e.IpOrCidr).ToListAsync();
                     await apisixClient.UpdateBlacklistAsync(currentList);
                     
                     _recentlyBlockedIps[ip] = DateTime.UtcNow;

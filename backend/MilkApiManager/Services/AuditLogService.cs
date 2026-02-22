@@ -71,14 +71,44 @@ public class AuditLogService
         using (var scope = _scopeFactory.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return await dbContext.AuditLogs
-                .OrderByDescending(l => l.Timestamp)
-                .Take(limit)
-                .ToListAsync();
-        }
-    }
-
-    public virtual async Task ShipLogsToSIEM(AuditLogEntry entry)
+                            return await dbContext.AuditLogs
+                            .OrderByDescending(l => l.Timestamp)
+                            .Take(limit)
+                            .ToListAsync();
+                    }
+                }
+            
+                public virtual async Task<Dictionary<string, int>> GetAuditStatsAsync()
+                {
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                        // Count entries by Action in the last 24 hours
+                        var cutoff = DateTime.UtcNow.AddHours(-24);
+                        return await dbContext.AuditLogs
+                            .Where(l => l.Timestamp >= cutoff)
+                            .GroupBy(l => l.Action)
+                            .Select(g => new { Action = g.Key, Count = g.Count() })
+                            .ToDictionaryAsync(x => x.Action, x => x.Count);
+                    }
+                }
+            
+                public virtual async Task<string> GetLogsCsvAsync(int limit = 1000)
+                {
+                    var logs = await GetLogsAsync(limit);
+                    var sb = new System.Text.StringBuilder();
+                    sb.AppendLine("Timestamp,User,Action,Resource,Status");
+                    
+                    foreach (var log in logs)
+                    {
+                        sb.AppendLine($"{log.Timestamp:O},{log.User},{log.Action},{log.Resource},{log.StatusCode}");
+                    }
+                    
+                    return sb.ToString();
+                }
+            
+                public virtual async Task ShipLogsToSIEM(AuditLogEntry entry)
+            
     {
         // Placeholder for SIEM shipping logic (e.g., Splunk, Azure Monitor)
         // For now, it's handled by Console output which is collected by Fluentd

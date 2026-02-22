@@ -2,57 +2,129 @@
 @using MilkApiManager.Models
 @using MilkApiManager.Services
 @inject AuditLogService AuditLogService
+@inject IJSRuntime JSRuntime
 
-<MudTable Items="@_logs" Hover="true" Filter="new Func<AuditLogEntry,bool>(FilterFunc)">
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">Audit Logs</MudText>
-        <MudSpacer />
-        <MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-    </ToolBarContent>
-    <HeaderContent>
-        <MudTh>Timestamp</MudTh>
-        <MudTh>User</MudTh>
-        <MudTh>Action</MudTh>
-        <MudTh>Resource</MudTh>
-        <MudTh>Details</MudTh>
-    </HeaderContent>
-    <RowTemplate>
-        <MudTd DataLabel="Timestamp">@context.Timestamp</MudTd>
-        <MudTd DataLabel="User">@context.User</MudTd>
-        <MudTd DataLabel="Action"><MudChip T="string" Color="Color.Info" Size="Size.Small">@context.Action</MudChip></MudTd>
-        <MudTd DataLabel="Resource">@context.Resource</MudTd>
-        <MudTd DataLabel="Details">
-            <MudText Typo="Typo.body2" Style="white-space: pre-wrap; word-break: break-all;">
-                @(context.DetailsJson?.Length > 50 ? context.DetailsJson.Substring(0, 50) + "..." : context.DetailsJson)
-            </MudText>
-        </MudTd>
-    </RowTemplate>
-    <PagerContent>
-        <MudTablePager />
-    </PagerContent>
-</MudTable>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true"><MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Class="mr-2"/> Audit & Compliance Dashboard</MudText>
+    
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full py-8" Elevation="2">
+                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Total Events (24h)</MudText>
+                <MudText Typo="Typo.h3">@_totalEvents</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full py-8" Elevation="2">
+                <MudText Typo="Typo.subtitle2" Color="Color.Error">Policy Violations</MudText>
+                <MudText Typo="Typo.h3">@_violations</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full py-8" Elevation="2">
+                <MudText Typo="Typo.subtitle2" Color="Color.Info">Most Active User</MudText>
+                <MudText Typo="Typo.h5">@_topUser</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full py-8" Elevation="2">
+                <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Download" Color="Color.Success" OnClick="ExportToCsv" Class="mt-2">
+                    Export CSV Report
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudTable Items="@_logs" Hover="true" Bordered="false" Striped="true" Elevation="2" Filter="new Func<AuditLogEntry,bool>(FilterFunc)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Recent Activity Logs</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search logs (user, action, resource...)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Timestamp</MudTh>
+            <MudTh>User</MudTh>
+            <MudTh>Action</MudTh>
+            <MudTh>Resource</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Details</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Timestamp">@context.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+            <MudTd DataLabel="User"><MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">@context.User[0]</MudAvatar> @context.User</MudTd>
+            <MudTd DataLabel="Action">
+                <MudChip T="string" Color="@GetActionColor(context.Action)" Size="Size.Small" Variant="Variant.Text">@context.Action</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Resource"><code>@context.Resource</code></MudTd>
+            <MudTd DataLabel="Status">
+                <MudBadge Content="@context.StatusCode" Color="@(context.StatusCode < 400 ? Color.Success : Color.Error)" Overlap="false" Bordered="true">
+                    <MudIcon Icon="@(context.StatusCode < 400 ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)" Size="Size.Small" />
+                </MudBadge>
+            </MudTd>
+            <MudTd DataLabel="Details">
+                <MudTooltip Text="@context.DetailsJson">
+                    <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 200px;">
+                        @context.DetailsJson
+                    </MudText>
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50, 100}" />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
 
 @code {
     private string _searchString = "";
     private List<AuditLogEntry> _logs = new();
+    private int _totalEvents = 0;
+    private int _violations = 0;
+    private string _topUser = "N/A";
 
     protected override async Task OnInitializedAsync()
     {
-        _logs = await AuditLogService.GetLogsAsync(500);
+        await LoadData();
     }
 
-    private bool FilterFunc(AuditLogEntry element) => FilterFunc1(element, _searchString);
-
-    private bool FilterFunc1(AuditLogEntry element, string searchString)
+    private async Task LoadData()
     {
-        if (string.IsNullOrWhiteSpace(searchString))
-            return true;
-        if (element.User.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-        if (element.Action.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-        if (element.Resource.Contains(searchString, StringComparison.OrdinalIgnoreCase))
-            return true;
-        return false;
+        _logs = await AuditLogService.GetLogsAsync(1000);
+        
+        // Calculate basic stats for the dashboard
+        _totalEvents = _logs.Count;
+        _violations = _logs.Count(l => l.StatusCode >= 400);
+        _topUser = _logs.GroupBy(l => l.User)
+                        .OrderByDescending(g => g.Count())
+                        .Select(g => g.Key)
+                        .FirstOrDefault() ?? "N/A";
+    }
+
+    private Color GetActionColor(string action) => action.ToLower() switch
+    {
+        var a when a.Contains("delete") || a.Contains("remove") => Color.Error,
+        var a when a.Contains("create") || a.Contains("add") => Color.Success,
+        var a when a.Contains("update") || a.Contains("patch") => Color.Warning,
+        _ => Color.Info
+    };
+
+    private async Task ExportToCsv()
+    {
+        var csvContent = "Timestamp,User,Action,Resource,Status\n" + 
+                         string.Join("\n", _logs.Select(l => $"{l.Timestamp:O},{l.User},{l.Action},{l.Resource},{l.StatusCode}"));
+        
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csvContent);
+        var base64 = Convert.ToBase64String(bytes);
+        
+        var fileName = $"audit_report_{DateTime.Now:yyyyMMdd}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", base64);
+    }
+
+    private bool FilterFunc(AuditLogEntry element)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        return element.User.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               element.Action.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+               element.Resource.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
     }
 }
