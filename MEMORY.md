@@ -22,3 +22,10 @@ If you receive a heartbeat poll (a user message matching the heartbeat prompt ab
 HEARTBEAT_OK
 OpenClaw treats a leading/trailing "HEARTBEAT_OK" as a heartbeat ack (and may discard it).
 If something needs attention, do NOT include "HEARTBEAT_OK"; reply with the alert text instead.
+
+## Development Flow & Stability (穩定開發流程)
+- **Mandatory Verification**: BEFORE any `git push` or concluding a task, you MUST run `./scripts/verify-all.sh` (Linux) or `./scripts/verify-all.ps1` (Windows).
+- **Zero-Failure Policy**: Never commit or push if any test in the verification suite fails.
+- **Reporting**: Always check `E2E_TEST_REPORT.md` after running the verification script to confirm all components are green.
+- **Concurrent Safety**: When operating on two VPS, read `HEARTBEAT.md` first to avoid modifying the same controller or service simultaneously.
+- **Code Style**: Adhere to existing .NET naming conventions and ensure PII masking logic is covered by at least one E2E test.

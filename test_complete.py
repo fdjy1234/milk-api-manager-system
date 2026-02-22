@@ -29,19 +29,19 @@ def test_api(name, url, method="GET", data=None, headers=None):
         print(f"Status: {response.status_code}")
         
         if response.status_code < 400:
-            print(f"✓ SUCCESS")
+            print(f"[PASS] SUCCESS")
             try:
                 json_data = response.json()
                 print(f"Response: {json.dumps(json_data, indent=2)[:500]}")
             except:
                 print(f"Response: {response.text[:200]}")
         else:
-            print(f"✗ FAILED - Status {response.status_code}")
+            print(f"[FAIL] FAILED - Status {response.status_code}")
             print(f"Response: {response.text[:200]}")
             
         return response
     except Exception as e:
-        print(f"✗ ERROR: {e}")
+        print(f"[ERROR] ERROR: {str(e)}")
         return None
 
 print("="*60)
