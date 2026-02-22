@@ -249,6 +249,16 @@ namespace MilkApiManager.Services
             _logger.LogInformation($"Successfully created consumer group {id}");
         }
 
+        public virtual async Task<string> GetConsumerGroupsAsync()
+        {
+            var request = CreateRequest(HttpMethod.Get, "consumer_groups");
+            var response = await _httpClient.SendAsync(request);
+            // APISIX might return 404 if no groups exist or feature disabled, handle gracefully?
+            // Usually returns empty list.
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
+        }
+
         public virtual async Task DeleteConsumerGroupAsync(string id)
         {
             var request = CreateRequest(HttpMethod.Delete, $"consumer_groups/{id}");

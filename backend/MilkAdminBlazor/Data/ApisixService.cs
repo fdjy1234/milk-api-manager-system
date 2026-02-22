@@ -379,5 +379,69 @@ namespace MilkAdminBlazor.Data
         {
             await _httpClient.DeleteAsync($"api/PiiMasking/{id}");
         }
+
+        // --- Consumer Groups (Traffic Tiers) ---
+        public class ConsumerGroupDto
+        {
+            [JsonPropertyName("id")]
+            public required string Id { get; set; }
+
+            [JsonPropertyName("desc")]
+            public string? Desc { get; set; }
+
+            // Simplified quota view for UI
+            public int RateLimit { get; set; } = 1000;
+        }
+
+        public async Task<List<ConsumerGroupDto>> GetConsumerGroupsAsync()
+        {
+            try
+            {
+                // In a real implementation, we would map the complex APISIX plugin config to a simple DTO
+                var groups = await _httpClient.GetFromJsonAsync<List<JsonElement>>("api/ConsumerGroup");
+                var result = new List<ConsumerGroupDto>();
+                
+                foreach (var g in groups ?? new List<JsonElement>())
+                {
+                    var id = g.GetProperty("id").GetString() ?? "";
+                    var rate = 0;
+                    
+                    if (g.TryGetProperty("plugins", out var plugins) && 
+                        plugins.TryGetProperty("limit-count", out var limit))
+                    {
+                        rate = limit.GetProperty("count").GetInt32();
+                    }
+
+                    result.Add(new ConsumerGroupDto { Id = id, RateLimit = rate });
+                }
+                return result;
+            }
+            catch { return new List<ConsumerGroupDto>(); }
+        }
+
+        public async Task SaveConsumerGroupAsync(ConsumerGroupDto group)
+        {
+            // Construct APISIX payload
+            var payload = new
+            {
+                id = group.Id,
+                plugins = new Dictionary<string, object>
+                {
+                    ["limit-count"] = new
+                    {
+                        count = group.RateLimit,
+                        time_window = 60, // 1 minute default
+                        rejected_code = 429,
+                        key = "remote_addr"
+                    }
+                }
+            };
+            await _httpClient.PutAsJsonAsync($"api/ConsumerGroup/{group.Id}", payload);
+        }
+
+        public async Task DeleteConsumerGroupAsync(string id)
+        {
+            await _httpClient.DeleteAsync($"api/ConsumerGroup/{id}");
+        }
     }
 }

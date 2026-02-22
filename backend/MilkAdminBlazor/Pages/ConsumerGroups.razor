@@ -1,0 +1,124 @@
+@page "/consumer-groups"
+@using MilkAdminBlazor.Data
+@inject ApisixService ApisixService
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div>
+            <MudText Typo="Typo.h4"><MudIcon Icon="@Icons.Material.Filled.Layers" Size="Size.Large" Class="mr-2"/> Traffic Tiers</MudText>
+            <MudText Typo="Typo.body1" Class="text-muted">Manage consumer groups and rate limiting policies (Gold, Silver, Free).</MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenDialog">Create Tier</MudButton>
+    </div>
+
+    @if (groups == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var group in groups)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3" Class="h-100">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudAvatar Color="@GetColor(group.Id)" Variant="Variant.Filled">@group.Id[0].ToString().ToUpper()</MudAvatar>
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@group.Id</MudText>
+                                <MudText Typo="Typo.caption">Rate Limit Policy</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Default" OnClick="@(() => DeleteGroup(group.Id))" />
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <div class="d-flex align-center justify-center py-4">
+                                <MudText Typo="Typo.h3" Color="Color.Primary" Class="fw-bold">@group.RateLimit</MudText>
+                                <MudText Typo="Typo.body1" Class="ml-2 mt-2 text-muted">req / min</MudText>
+                            </div>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" OnClick="@(() => EditGroup(group))">Adjust Limit</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+<MudDialog @bind-IsVisible="isDialogVisible" Options="dialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3"/> @(isEditing ? "Edit Tier" : "Create New Tier")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="editingGroup.Id" Label="Group ID (e.g. gold, silver)" ReadOnly="@isEditing" HelperText="Unique identifier for this tier" />
+        <MudSlider @bind-Value="editingGroup.RateLimit" Min="10" Max="10000" Step="10" Color="Color.Primary">Rate Limit: @editingGroup.RateLimit req/min</MudSlider>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveGroup">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<ApisixService.ConsumerGroupDto>? groups;
+    private bool isDialogVisible;
+    private bool isEditing;
+    private ApisixService.ConsumerGroupDto editingGroup = new() { Id = "" };
+    private DialogOptions dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+    }
+
+    private async Task LoadGroups()
+    {
+        groups = await ApisixService.GetConsumerGroupsAsync();
+    }
+
+    private Color GetColor(string id) => id.ToLower() switch {
+        "gold" => Color.Warning,
+        "silver" => Color.Surface, // Gray-ish
+        "bronze" => Color.Secondary,
+        _ => Color.Info
+    };
+
+    private void OpenDialog()
+    {
+        editingGroup = new ApisixService.ConsumerGroupDto { Id = "", RateLimit = 100 };
+        isEditing = false;
+        isDialogVisible = true;
+    }
+
+    private void CloseDialog()
+    {
+        isDialogVisible = false;
+    }
+
+    private void EditGroup(ApisixService.ConsumerGroupDto group)
+    {
+        editingGroup = new ApisixService.ConsumerGroupDto { Id = group.Id, RateLimit = group.RateLimit };
+        isEditing = true;
+        isDialogVisible = true;
+    }
+
+    private async Task SaveGroup()
+    {
+        await ApisixService.SaveConsumerGroupAsync(editingGroup);
+        isDialogVisible = false;
+        await LoadGroups();
+    }
+
+    private async Task DeleteGroup(string id)
+    {
+        await ApisixService.DeleteConsumerGroupAsync(id);
+        await LoadGroups();
+    }
+}
